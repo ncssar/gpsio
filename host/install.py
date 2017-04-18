@@ -1,3 +1,4 @@
+from __future__ import print_function
 # 1. locate GPSBabel install location
 # 2. determine host install location
 # 3. copy host files into location
@@ -39,22 +40,22 @@ MANIFEST_INSTALL_LOCATION_FIREFOX = {
 }
 
 def find_gpsbabel():
-    print "Looking for a GPSBabel install.  This may take a minute . . .\n"
+    print("Looking for a GPSBabel install.  This may take a minute . . .\n")
     items=os.walk(os.path.normpath('/'))
     matches = []
     for item in items:
         if item[0].endswith(DEFAULT_GPSBABEL_DIR[sys.platform]) and os.path.isfile(os.path.join(item[0], DEFAULT_GPSBABEL_NAME[sys.platform])):
             matches.append(os.path.join(item[0], DEFAULT_GPSBABEL_NAME[sys.platform]))
-    
-    print "Please identify your GPSBabel install location:"
+
+    print("Please identify your GPSBabel install location:")
     if len(matches) == 0:
-        print "GPSBabel not found, you may need to install it."
-        print "enter a custom location: ",
+        print("GPSBabel not found, you may need to install it.")
+        print("enter a custom location: ",end='')
     else:
         for i in range(0, len(matches)):
-            print "[ " + str(i) + " ] " + matches[i]
-        print ""
-        print "enter a number or a custom location: ",
+            print("[ " + str(i) + " ] " + matches[i])
+        print("")
+        print("enter a number or a custom location: ",end='')
     s=sys.stdin.readline().rstrip()
     try:
         i=int(s)
@@ -64,7 +65,7 @@ def find_gpsbabel():
 
 def get_install_location():
     default = DEFAULT_HOST_LOCATION[sys.platform]
-    print "Where would you like to install GPS IO? [enter for default location of " + default + "]? ",
+    print("Where would you like to install GPS IO? [enter for default location of " + default + "]? ",end='')
     s=sys.stdin.readline().rstrip()
     if len(s) == 0:
         return default
@@ -76,7 +77,7 @@ debug=False
 gpsbabel_exe="GPSBABEL_LOCATION"
 chunk_size=100000
 """.replace("GPSBABEL_LOCATION", gpsbabel_location)
-    
+
     try:
         os.makedirs(host_location)
     except:
@@ -86,7 +87,7 @@ chunk_size=100000
         subprocess.call("copy \"wrapper.bat\" \"" + host_location + "\"", shell=True)
     else:
         subprocess.call(["cp", "wrapper.py", host_location])
-            
+
     with open(os.path.join(host_location, 'config.py'), 'w') as file:
         file.write(config_text)
 
@@ -96,35 +97,39 @@ def install_manifest(host_location):
         wrapper_path = wrapper_path + "\\wrapper.bat"
     else:
         wrapper_path = wrapper_path + "/wrapper.py"
-    
+
     manifest_location_chrome = MANIFEST_INSTALL_LOCATION_CHROME[sys.platform].replace('HOST_LOCATION', host_location)
     nmh_manifest_chrome = '{"name": "com.caltopo.gpsio","description": "GPS IO","path": "%s","type": "stdio","allowed_origins": ["chrome-extension://afgcejeehpnhafgikkimogllebbgegck/"]}'
-    print "placing chrome manifest file in", manifest_location_chrome
+    print("placing chrome manifest file in", manifest_location_chrome)
     try:
         os.makedirs(os.path.dirname(manifest_location_chrome))
     except:
         pass
     with open(manifest_location_chrome, "w") as file:
         file.write(nmh_manifest_chrome % wrapper_path.replace("\\", "\\\\"))
-        
+
     manifest_location_firefox = MANIFEST_INSTALL_LOCATION_FIREFOX[sys.platform].replace('HOST_LOCATION', host_location)
     nmh_manifest_firefox = '{"name": "com.caltopo.gpsio","description": "GPS IO","path": "%s","type": "stdio","allowed_extensions": ["gpsio@caltopo.com"]}'
-    print "placing firefox manifest file in", manifest_location_firefox
+    print("placing firefox manifest file in", manifest_location_firefox)
     try:
         os.makedirs(os.path.dirname(manifest_location_firefox))
     except:
         pass
     with open(manifest_location_firefox, "w") as file:
         file.write(nmh_manifest_firefox % wrapper_path.replace("\\", "\\\\"))
-    
+
     if sys.platform == 'win32':
         subprocess.call(["REG", "ADD", "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.caltopo.gpsio", "/ve", "/t", "REG_SZ", "/d", manifest_location_chrome, "/f"])
         subprocess.call(["REG", "ADD", "HKCU\SOFTWARE\Mozilla\NativeMessagingHosts\com.caltopo.gpsio", "/ve", "/t", "REG_SZ", "/d", manifest_location_firefox, "/f"])
 
+print("GPSIO host installer v1")
 gpsbabel_location = find_gpsbabel()
 host_location = get_install_location()
 
-print "installing native messaging host at", host_location
+print("installing native messaging host at", host_location)
 install_host(host_location)
 
 install_manifest(host_location)
+
+print("\n\npress enter to exit:",end='')
+sys.stdin.readline()
