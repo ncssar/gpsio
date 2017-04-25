@@ -50,12 +50,12 @@ def find_gpsbabel():
     print("Please identify your GPSBabel install location:")
     if len(matches) == 0:
         print("GPSBabel not found, you may need to install it.")
-        print("enter a custom location: ",end='')
+        print("enter a custom location: ",end='',flush=True)
     else:
         for i in range(0, len(matches)):
             print("[ " + str(i) + " ] " + matches[i])
         print("")
-        print("enter a number or a custom location: ",end='')
+        print("enter a number or a custom location: ",end='',flush=True)
     s=sys.stdin.readline().rstrip()
     try:
         i=int(s)
@@ -65,7 +65,7 @@ def find_gpsbabel():
 
 def get_install_location():
     default = DEFAULT_HOST_LOCATION[sys.platform]
-    print("Where would you like to install GPS IO? [enter for default location of " + default + "]? ",end='')
+    print("Where would you like to install GPS IO? [enter for default location of " + default + "]? ",end='',flush=True)
     s=sys.stdin.readline().rstrip()
     if len(s) == 0:
         return default
@@ -119,8 +119,8 @@ def install_manifest(host_location):
         file.write(nmh_manifest_firefox % wrapper_path.replace("\\", "\\\\"))
 
     if sys.platform == 'win32':
-        subprocess.call(["REG", "ADD", "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.caltopo.gpsio", "/ve", "/t", "REG_SZ", "/d", manifest_location_chrome, "/f"])
-        subprocess.call(["REG", "ADD", "HKCU\SOFTWARE\Mozilla\NativeMessagingHosts\com.caltopo.gpsio", "/ve", "/t", "REG_SZ", "/d", manifest_location_firefox, "/f"])
+        subprocess.call(["REG", "ADD", "HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.caltopo.gpsio", "/ve", "/t", "REG_SZ", "/d", manifest_location_chrome, "/f"])
+        subprocess.call(["REG", "ADD", "HKCU\\SOFTWARE\\Mozilla\\NativeMessagingHosts\\com.caltopo.gpsio", "/ve", "/t", "REG_SZ", "/d", manifest_location_firefox, "/f"])
 
 print("GPSIO host installer v1")
 gpsbabel_location = find_gpsbabel()
@@ -131,5 +131,5 @@ install_host(host_location)
 
 install_manifest(host_location)
 
-print("\n\npress enter to exit:",end='')
+print("\n\npress enter to exit:",end='',flush=True)
 sys.stdin.readline()
