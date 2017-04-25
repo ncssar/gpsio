@@ -50,12 +50,14 @@ def find_gpsbabel():
     print("Please identify your GPSBabel install location:")
     if len(matches) == 0:
         print("GPSBabel not found, you may need to install it.")
-        print("enter a custom location: ",end='',flush=True)
+        print("enter a custom location: ",end='')
+        sys.stdout.flush()
     else:
         for i in range(0, len(matches)):
             print("[ " + str(i) + " ] " + matches[i])
         print("")
-        print("enter a number or a custom location: ",end='',flush=True)
+        print("enter a number or a custom location: ",end='')
+        sys.stdout.flush()
     s=sys.stdin.readline().rstrip()
     try:
         i=int(s)
@@ -65,7 +67,8 @@ def find_gpsbabel():
 
 def get_install_location():
     default = DEFAULT_HOST_LOCATION[sys.platform]
-    print("Where would you like to install GPS IO? [enter for default location of " + default + "]? ",end='',flush=True)
+    print("Where would you like to install GPS IO? [enter for default location of " + default + "]? ",end='')
+    sys.stdout.flush()
     s=sys.stdin.readline().rstrip()
     if len(s) == 0:
         return default
@@ -131,5 +134,6 @@ install_host(host_location)
 
 install_manifest(host_location)
 
-print("\n\npress enter to exit:",end='',flush=True)
+print("\n\npress enter to exit:",end='')
+sys.stdout.flush()
 sys.stdin.readline()
