@@ -102,7 +102,7 @@ def install_manifest(host_location):
         wrapper_path = wrapper_path + "/wrapper.py"
 
     manifest_location_chrome = MANIFEST_INSTALL_LOCATION_CHROME[sys.platform].replace('HOST_LOCATION', host_location)
-    nmh_manifest_chrome = '{"name": "com.caltopo.gpsio","description": "GPS IO","path": "%s","type": "stdio","allowed_origins": ["chrome-extension://afgcejeehpnhafgikkimogllebbgegck/"]}'
+    nmh_manifest_chrome = '{"name": "com.caltopo.gpsio","description": "GPS IO","path": "%s","type": "stdio","allowed_origins": ["chrome-extension://afgcejeehpnhafgikkimogllebbgegck/","chrome-extension://hoecjlpnaeogdncffnambjemmfcajmcc"]}'
     print("placing chrome manifest file in", manifest_location_chrome)
     try:
         os.makedirs(os.path.dirname(manifest_location_chrome))
