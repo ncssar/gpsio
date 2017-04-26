@@ -49,6 +49,8 @@ if debug:
 
 if sys.platform == "win32":
     import msvcrt
+    sys.stdout=os.fdopen(sys.stdout.fileno(), 'w+b')
+    sys.stdin=os.fdopen(sys.stdin.fileno(), 'rb', 0)
     msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
 
