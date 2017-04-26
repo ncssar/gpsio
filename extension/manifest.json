@@ -12,7 +12,7 @@
   
   "name": "gpsio",
   "description": "GPS IO",
-  "version": "0.0.2",
+  "version": "0.0.7",
   
   "browser_action": {
     "default_icon": "gps.png",
@@ -27,5 +27,5 @@
     "scripts": ["background.js"]
   },
     
-  "content_scripts": [{"matches": ["http://*/*"], "js": ["content_script.js"]}]
+  "content_scripts": [{"matches": ["https://*/*","http://*/*"], "js": ["content_script.js"]}]
 }
