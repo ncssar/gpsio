@@ -131,7 +131,14 @@ def Main():
             if drive:
                 if debug:
                     logfile.write("GMSM drive found at "+drive+"; calling transfer_gmsm\n")
-                transfer_gmsm(cmd,data,drive)
+                # if the request contains m and n indices, only read those
+                #  files from the GPS device, otherwise read all
+                m=0
+                n=0
+                if "m" in rq and "n" in rq:
+                    m=rq["m"]
+                    n=rq["n"]
+                transfer_gmsm(cmd,data,drive,m,n)
             else:
                 if debug:
                     logfile.write("No GMSM drive was found; calling transfer_gbsbabel\n")
@@ -169,7 +176,7 @@ def scan_for_gmsm():
     else:
         return False
 
-def transfer_gmsm(cmd,data,drive):
+def transfer_gmsm(cmd,data,drive,m,n):
         # Apparently, the file structure on a GPSmap 62s looks like this:
         # 1. the file specified by parsing GarminDevice.xml (apparently always
         #     Garmin/GPX/Current/Current.gpx) only contains the current track log if
@@ -215,14 +222,28 @@ def transfer_gmsm(cmd,data,drive):
 ##              send_message({'message':drive})
 ##              sys.exit()
 
-            # 1. get a list of all .gpx files recursively under Garmin/GPX
+        # 1. get a list of all .gpx files recursively under Garmin/GPX
         gpx_files=[]
         for root, dirs, files in os.walk(os.path.join(drive,'Garmin','GPX')):
             for file in files:
                 if file.upper().endswith(".GPX") and not(file.startswith(".")):
                     gpx_files.append(os.path.join(root,file))
+        # reverse chronological sort (most recent file is first in the list)
+        gpx_files=sorted(gpx_files,key=os.path.getmtime,reverse=True)
+        # only get files m thru n (both are one-based) from the sorted list
+        #  (default: if both are zero, read all files)
+        j=len(gpx_files)
+        if m==0:
+            m=1
+        if m>j:
+            m=j
+        if n>j or n==0:
+            n=j
+        if n<m:
+            n=m
+        gpx_files=gpx_files[m-1:n]
         if debug:
-            logfile.write("Reading gpx files from device:")
+            logfile.write("Reading gpx files ("+str(m)+" thru "+str(n)+" from a reverse-chronological-order sorted list of "+str(j)+" total files) from device:")
             logfile.write(str(gpx_files)+"\n")
 
         # 2. use gpsbabel to combine the files and send to the extension
