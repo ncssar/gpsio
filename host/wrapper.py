@@ -131,7 +131,7 @@ def Main():
             if drive:
                 if debug:
                     logfile.write("GMSM drive found at "+drive+"; calling transfer_gmsm\n")
-                transfer_gmsm(cmd,data,drive)
+                transfer_gmsm(cmd,data,drive,rq["options"])
             else:
                 if debug:
                     logfile.write("No GMSM drive was found; calling transfer_gbsbabel\n")
@@ -169,7 +169,7 @@ def scan_for_gmsm():
     else:
         return False
 
-def transfer_gmsm(cmd,data,drive):
+def transfer_gmsm(cmd,data,drive,options):
         # Apparently, the file structure on a GPSmap 62s looks like this:
         # 1. the file specified by parsing GarminDevice.xml (apparently always
         #     Garmin/GPX/Current/Current.gpx) only contains the current track log if
@@ -221,9 +221,49 @@ def transfer_gmsm(cmd,data,drive):
             for file in files:
                 if file.upper().endswith(".GPX") and not(file.startswith(".")):
                     gpx_files.append(os.path.join(root,file))
-        if debug:
-            logfile.write("Reading gpx files from device:")
-            logfile.write(str(gpx_files)+"\n")
+
+        # reverse chronological sort (most recent file is first in the list)
+        gpx_files=sorted(gpx_files,key=os.path.getmtime,reverse=True)
+        totalFileCount=len(gpx_files)
+                
+        # apply file filtering as specified in the extension options
+        if options["method"]=="recent":
+            # only get files m thru n (both are one-based) from the sorted list
+            #  (set m=1 by default; not specified in the options; leave it
+            #    here for forward compatibility)
+            m=0
+            n=int(options["recentSel"])
+
+            if m==0:
+                m=1
+            if m>totalFileCount:
+                m=totalFileCount
+            if n>totalFileCount or n==0:
+                n=totalFileCount
+            if n<m:
+                n=m
+            if debug:
+                logfile.write("Selecting files "+str(m)+" thru "+str(n)+" from a reverse-chronological-order sorted list...\n")
+            gpx_files=gpx_files[m-1:n]
+            
+        if options["method"]=="time":
+            currentTime=time.time()
+            if debug:
+                logfile.write("Filtering out files older than "+options["timeSel"]+" hours...\n")
+            gpx_files=[f for f in gpx_files if (currentTime-os.path.getmtime(f))/3600<int(options["timeSel"])]    
+                
+        if options["size"]==True:
+            sizeSelDict={'100kB':102400,'250kB':256000,'500kB':512000,'1MB':1048576}
+            if debug:
+                logfile.write("Filtering out files larger than "+options["sizeSel"]+"...\n")
+            gpx_files=[f for f in gpx_files if (os.path.getsize(f)<sizeSelDict[options["sizeSel"]])]
+
+        # end of filtering
+        
+        # list the filtered file set
+        filteredFileCount=len(gpx_files)
+        logfile.write("Sending "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total gpx files on the device:\n")
+        logfile.write(str(gpx_files)+"\n")
 
         # 2. use gpsbabel to combine the files and send to the extension
         args=[gpsbabel_exe,"-w","-r","-t","-i","gpx"]
