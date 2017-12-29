@@ -20,7 +20,7 @@
    },
 
   "permissions": [
-    "nativeMessaging"
+    "nativeMessaging","storage"
     ],
   
   "background": {
