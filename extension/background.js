@@ -36,7 +36,7 @@ var fn = function(request, sender, sendResponse) {
 	});
 	
 // always add the import options to the request, regardless of cmd
-    chrome.storage.sync.get({
+    chrome.storage.local.get({
         method:'time',
         timeSel:'24',
         recentSel:'3',
@@ -48,7 +48,7 @@ var fn = function(request, sender, sendResponse) {
         request.data.options=items;
         console.log("about to send using port.postMessage:");
         console.log(request.data);
-        // need to post the message asynchronously (here in the sync.get callback)
+        // need to post the message asynchronously (here in the local.get callback)
         //  to make sure request.data includes options
         port.postMessage(request.data);
    });

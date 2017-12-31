@@ -21,7 +21,7 @@ save_options = function() {
    var recentSel=document.getElementById('recentSel').value;
    var size=document.getElementById('size').checked;
    var sizeSel=document.getElementById('sizeSel').value;
-   chrome.storage.sync.set({
+   chrome.storage.local.set({
        method:method,
        timeSel:timeSel,
        recentSel:recentSel,
@@ -31,7 +31,7 @@ save_options = function() {
 }
 
 load_options = function() {
-    chrome.storage.sync.get({
+    chrome.storage.local.get({
         method:'time',
         timeSel:'24',
         recentSel:'3',
