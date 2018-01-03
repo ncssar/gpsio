@@ -1,4 +1,4 @@
-var rt = null
+var rt = null;
 if(typeof browser != "undefined") rt = browser.runtime;
 if(typeof chrome != "undefined") rt = chrome.runtime;
 
@@ -15,7 +15,58 @@ check = function() {
 	});
 }
 
+save_options = function() {
+   var method=document.querySelector('input[name="method"]:checked').id
+   var timeSel=document.getElementById('timeSel').value;
+   var recentSel=document.getElementById('recentSel').value;
+   var size=document.getElementById('size').checked;
+   var sizeSel=document.getElementById('sizeSel').value;
+   chrome.storage.local.set({
+       method:method,
+       timeSel:timeSel,
+       recentSel:recentSel,
+       size:size,
+       sizeSel:sizeSel
+    });
+}
+
+load_options = function() {
+    chrome.storage.local.get({
+        method:'time',
+        timeSel:'24',
+        recentSel:'3',
+        size:true,
+        sizeSel:'100kB'
+    }, function(items) {
+        document.getElementById(items.method).checked=true;
+        document.getElementById('timeSel').value=items.timeSel;
+        document.getElementById('recentSel').value=items.recentSel;
+        document.getElementById('size').checked=items.size;
+        document.getElementById('sizeSel').value=items.sizeSel;
+    });
+}
+
+_reset = function() {
+    document.getElementById('time').checked=true;
+    document.getElementById('timeSel').value='24';
+    document.getElementById('recentSel').value='3';
+    document.getElementById('size').checked=true;
+    document.getElementById('sizeSel').value='100kB';
+    save_options();
+}
+
+_close = function() {
+    window.close();
+}
+
 window.addEventListener('load', function() {
 	check();
-	document.getElementById('tryagain').addEventListener("click", check, false);
+	load_options();
+	document.getElementById('tryagain').addEventListener("click", check);
+	document.getElementById('reset').addEventListener("click",_reset);
+    document.getElementById('close').addEventListener("click",_close);
+   var inputs=document.querySelectorAll("input,select");
+   for (i=0;i<inputs.length;i++) {
+       inputs[i].onchange=save_options;
+   }
 });
