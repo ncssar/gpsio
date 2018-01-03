@@ -12,7 +12,7 @@ import subprocess
 import sys
 
 DEFAULT_HOST_LOCATION = {
-    'win32': 'c:\gpsio',
+    'win32': os.path.join(os.path.expanduser('~'), 'gpsio'),
     'darwin': os.path.join(os.path.expanduser('~'), 'Library/com.caltopo.gpsio'),
     'linux': '/opt/gpsio'
 }
