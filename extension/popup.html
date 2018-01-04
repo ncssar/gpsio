@@ -1,18 +1,28 @@
 <!doctype html>
-<html style="min-width:400px">
+<html style="min-width:400px;max-width:400px;">
   <head>
-    <title>GPS I/IO</title>
+    <title>GPS I/O</title>
+    <link rel="stylesheet" type="text/css" href="popup.css">
     <script type="text/javascript" src="popup.js"></script>
   </head>
   <body>
-	  <h1>GPS I/O</h1>
-	  <div id="condition_good" style="color: green; display: none">Plugin working properly</div>
-	  <div id="condition_bad" style="color: red">Cannot communicate with host</div>
+	  <table>
+	      <tr>
+	           <td><h1>GPS I/O</h1></td>
+	           <td style="padding-left:20px;">
+	  <div id="condition_good" style="color: green; display: none;">Plugin working properly</div>
+	  <div id="condition_bad" style="color: red;">Cannot communicate with host</div>
       <div><button id="tryagain">check again</button></div>
-	  <h2>Import Filter Settings</h2>
-	  <p>These filter settings can normally be left alone.  They are intended to speed up GPSIO imports by filtering out irrelevant data files.</p>
-	  <p>If you do not see the data you are looking for during GPSIO import, it might be in a file that was filtered out by these settings.</p>
-	  <p>These settings will be used the next and every subsequent time you import from a Garmin Mass Storage Mode device using GPSIO, until the next time you change them here.</p>
+      </td></tr></table>
+	  <h2>Import Filter Settings
+	  <a class="about" href="#about">About...</a></h2>
+	  <div id="about" class="overlay">
+	       <div class="popup">
+	           <a class="close" href="#">&times;</a>
+	           <p>These filter settings can normally be left alone.  They are intended to speed up GPSIO imports by filtering out irrelevant data files.</p>
+	           <p>If you do not see the data you are looking for during GPSIO import, it might be in a file that was filtered out by these settings.  Change the settings here, then import again.</p>
+	       </div>
+	   </div>
 	  <h3>File modification time filtering method</h3>
 	  <input type="radio" name="method" id="time">Only import files modified within the last <select id="timeSel">
             <option value="24">24</option>
