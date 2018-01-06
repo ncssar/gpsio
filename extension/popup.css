@@ -3,43 +3,21 @@ body {
     font-size: 75%;
     display: block;
     margin: 2px 8px 2px 8px;
+    width: 350px;
 }
-h1 {
+h1,h2 {
     margin:0px;
 }
-h2,h3 {
-    margin-top: 5px;
-    margin-bottom: 0px;
+h3 {
+    margin-top: 8px;
+    margin-bottom: 3px;
 }
 p {
     margin-top: 3px;
 }
-
-.box {
-  width: 90%;
-  margin: 0 auto;
-  background: rgba(255,255,255,0.2);
-  padding: 35px;
-  border: 2px solid #fff;
-  border-radius: 20px/50px;
-  background-clip: padding-box;
-  text-align: center;
+button {
+    margin:3px;
 }
-
-.button {
-  font-size: 1em;
-  padding: 10px;
-  color: #fff;
-  border: 2px solid #06D85F;
-  border-radius: 20px/50px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.3s ease-out;
-}
-.button:hover {
-  background: #06D85F;
-}
-
 .overlay {
   position: fixed;
   top: 0;
@@ -57,23 +35,17 @@ p {
 }
 
 .popup {
-  margin: 70px auto;
-  padding: 20px;
+  margin: 5% auto auto auto;
+  padding: 15px;
   background: #fff;
   border-radius: 5px;
-  width: 90%;
+  width: 80%;
   position: relative;
-  transition: all 5s ease-in-out;
 }
 
-.popup h2 {
-  margin-top: 0;
-  color: #333;
-  font-family: Tahoma, Arial, sans-serif;
-}
 .popup .close {
   position: absolute;
-  top: 5px;
+  top: 0px;
   right: 10px;
   transition: all 200ms;
   font-size: 20px;

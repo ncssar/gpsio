@@ -1,5 +1,5 @@
 <!doctype html>
-<html style="min-width:400px;max-width:400px;">
+<html style="min-width:350px;max-width:350px;">
   <head>
     <title>GPS I/O</title>
     <link rel="stylesheet" type="text/css" href="popup.css">
@@ -14,13 +14,18 @@
 	  <div id="condition_bad" style="color: red;">Cannot communicate with host</div>
       <div><button id="tryagain">check again</button></div>
       </td></tr></table>
-	  <h2>Import Filter Settings
-	  <a class="about" href="#about">About...</a></h2>
+      <table>
+            <tr>
+                <td><h2>Import Filter Settings&nbsp;</h2></td>
+                <td><button id="aboutButton">?</button></td>
+            </tr>
+        </table>
 	  <div id="about" class="overlay">
 	       <div class="popup">
 	           <a class="close" href="#">&times;</a>
 	           <p>These filter settings can normally be left alone.  They are intended to speed up GPSIO imports by filtering out irrelevant data files.</p>
-	           <p>If you do not see the data you are looking for during GPSIO import, it might be in a file that was filtered out by these settings.  Change the settings here, then import again.</p>
+	           <p>Filters have no effect on older Garmin 'USB-Mode' devices such as GPSMap 60.</p>
+	           <p>Changes take effect immediately; there is nothing to 'save'.  If GPSIO import does not show the data you are looking for, relax these settings, then import again.</p>
 	       </div>
 	   </div>
 	  <h3>File modification time filtering method</h3>

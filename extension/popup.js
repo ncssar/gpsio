@@ -33,7 +33,7 @@ save_options = function() {
 load_options = function() {
     chrome.storage.local.get({
         method:'time',
-        timeSel:'24',
+        timeSel:'72',
         recentSel:'3',
         size:true,
         sizeSel:'100kB'
@@ -48,7 +48,7 @@ load_options = function() {
 
 _reset = function() {
     document.getElementById('time').checked=true;
-    document.getElementById('timeSel').value='24';
+    document.getElementById('timeSel').value='72';
     document.getElementById('recentSel').value='3';
     document.getElementById('size').checked=true;
     document.getElementById('sizeSel').value='100kB';
@@ -59,12 +59,17 @@ _close = function() {
     window.close();
 }
 
+about = function() {
+    window.location="#about";
+}
+
 window.addEventListener('load', function() {
 	check();
 	load_options();
 	document.getElementById('tryagain').addEventListener("click", check);
 	document.getElementById('reset').addEventListener("click",_reset);
     document.getElementById('close').addEventListener("click",_close);
+    document.getElementById('aboutButton').addEventListener("click",about);
    var inputs=document.querySelectorAll("input,select");
    for (i=0;i<inputs.length;i++) {
        inputs[i].onchange=save_options;
