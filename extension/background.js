@@ -38,7 +38,7 @@ var fn = function(request, sender, sendResponse) {
 // always add the import options to the request, regardless of cmd
     chrome.storage.local.get({
         method:'time',
-        timeSel:'24',
+        timeSel:'72',
         recentSel:'3',
         size:true,
         sizeSel:'100kB'
