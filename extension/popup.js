@@ -11,6 +11,13 @@ check = function() {
 		if(response.status == "ok") {
 			document.getElementById('condition_good').style.display = "block";
 			document.getElementById('condition_bad').style.display = "none";
+			var hasFilter = Number(response.version) >= 1;
+			document.getElementById('v0').style.display = hasFilter ? 'none' : 'block';
+			document.getElementById('v1').style.display = hasFilter ? 'block' : 'none';
+			document.body.style.height="100px";
+			window.setTimeout(function() {
+				document.body.style.height="";
+			}, 50);
 		}
 	});
 }

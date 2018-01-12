@@ -112,7 +112,7 @@ def Main():
         sys.exit()
 
     if cmd == "ping-host":
-        send_message({'cmd': 'ping-host', 'status': 'ok'})
+        send_message({'cmd': 'ping-host', 'status': 'ok', 'version': 1})
         sys.exit()
 
     # get the filter options, if they exist - used in the call to transfer_gmsm
@@ -149,7 +149,6 @@ def Main():
         sys.exit()
 
     if debug:
-        open(os.path.join(debug_path,"test.txt"), "w").write(request)
         logfile.write("rq.cmd:"+cmd+"\n")
         logfile.write("rq.target:"+target+"\n")
 
@@ -268,9 +267,15 @@ def transfer_gmsm(cmd,data,drive,options):
         
         # list the filtered file set
         filteredFileCount=len(gpx_files)
-        logfile.write("Sending "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total gpx files on the device:\n")
-        logfile.write(str(gpx_files)+"\n")
-
+        if filteredFileCount == 0:
+            if debug:
+                logfile.write("No recent files out of " + str(totalFileCount) + " total gpx files on the device:\n")
+            send_message({'cmd': cmd, 'status': 'error', 'message': 'No GPX files out of '+str(totalFileCount)+' met the filter settings.  Click the GPSIO Extension icon for details.' })
+            sys.exit()
+        if debug:
+            logfile.write("Sending "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total gpx files on the device:\n")
+            logfile.write(str(gpx_files)+"\n")
+        
         # 2. use gpsbabel to combine the files and send to the extension
         args=[gpsbabel_exe,"-w","-r","-t","-i","gpx"]
         for gpx_file in gpx_files:
