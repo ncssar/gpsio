@@ -17,7 +17,7 @@ for filename in host_filenames:
     zipf.write("host/" + filename, "gpsio-installer/" + filename)
 zipf.close()
 
-extension_filenames = ("background.js","content_script.js","gps.png","popup.html","popup.js")
+extension_filenames = ("background.js","content_script.js","gps.png","popup.html","popup.js","popup.css")
 def create_extension_zip(name, manifest):
     zipf=zipfile.ZipFile("build/" + name + ".zip", "w", zipfile.ZIP_DEFLATED)
     for filename in extension_filenames:

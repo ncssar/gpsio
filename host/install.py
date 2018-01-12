@@ -27,6 +27,12 @@ DEFAULT_GPSBABEL_NAME = {
     'darwin': 'contents/MacOS/gpsbabel'
 }
 
+DEFAULT_GPSBABEL_SEARCHPOINTS = {
+	'win32': ['c:/Program Files','c:/Program Files (x86)','c:/GPSBabel'],
+	'darwin': ['/Applications',os.path.join(os.path.expanduser('~'), 'Applications')],
+	'linux': ['/']
+}
+
 MANIFEST_INSTALL_LOCATION_CHROME = {
     'win32': 'HOST_LOCATION\\chrome-manifest.json',
     'darwin': os.path.join(os.path.expanduser('~'), 'Library/Application Support/Google/Chrome/NativeMessagingHosts/com.caltopo.gpsio.json'),
@@ -41,15 +47,16 @@ MANIFEST_INSTALL_LOCATION_FIREFOX = {
 
 def find_gpsbabel():
     print("Looking for a GPSBabel install.  This may take a minute . . .\n")
-    items=os.walk(os.path.normpath('/'))
     matches = []
-    for item in items:
-        if item[0].endswith(DEFAULT_GPSBABEL_DIR[sys.platform]) and os.path.isfile(os.path.join(item[0], DEFAULT_GPSBABEL_NAME[sys.platform])):
-            matches.append(os.path.join(item[0], DEFAULT_GPSBABEL_NAME[sys.platform]))
+    for point in DEFAULT_GPSBABEL_SEARCHPOINTS[sys.platform]:
+        items=os.walk(os.path.normpath(point))
+        for item in items:
+            if item[0].endswith(DEFAULT_GPSBABEL_DIR[sys.platform]) and os.path.isfile(os.path.join(item[0], DEFAULT_GPSBABEL_NAME[sys.platform])):
+                matches.append(os.path.join(item[0], DEFAULT_GPSBABEL_NAME[sys.platform]))
 
     print("Please identify your GPSBabel install location:")
     if len(matches) == 0:
-        print("GPSBabel not found, you may need to install it.")
+        print("GPSBabel not found.  You may need to install it, or it may be in an unusual location")
         print("enter a custom location: ",end='')
         sys.stdout.flush()
     else:

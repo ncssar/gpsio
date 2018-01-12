@@ -112,9 +112,14 @@ def Main():
         sys.exit()
 
     if cmd == "ping-host":
-        send_message({'cmd': 'ping-host', 'status': 'ok'})
+        send_message({'cmd': 'ping-host', 'status': 'ok', 'version': 1})
         sys.exit()
 
+    # get the filter options, if they exist - used in the call to transfer_gmsm
+    options={}
+    if "options" in rq:
+        options=rq["options"]
+        
     # differentiate by GPS brand and protocol
     if "target" in rq:
         target=rq["target"]
@@ -131,7 +136,7 @@ def Main():
             if drive:
                 if debug:
                     logfile.write("GMSM drive found at "+drive+"; calling transfer_gmsm\n")
-                transfer_gmsm(cmd,data,drive)
+                transfer_gmsm(cmd,data,drive,options)
             else:
                 if debug:
                     logfile.write("No GMSM drive was found; calling transfer_gbsbabel\n")
@@ -144,7 +149,6 @@ def Main():
         sys.exit()
 
     if debug:
-        open(os.path.join(debug_path,"test.txt"), "w").write(request)
         logfile.write("rq.cmd:"+cmd+"\n")
         logfile.write("rq.target:"+target+"\n")
 
@@ -169,7 +173,7 @@ def scan_for_gmsm():
     else:
         return False
 
-def transfer_gmsm(cmd,data,drive):
+def transfer_gmsm(cmd,data,drive,options):
         # Apparently, the file structure on a GPSmap 62s looks like this:
         # 1. the file specified by parsing GarminDevice.xml (apparently always
         #     Garmin/GPX/Current/Current.gpx) only contains the current track log if
@@ -212,19 +216,66 @@ def transfer_gmsm(cmd,data,drive):
         #    re-plug: that Imported_ file no longer exists.
 
     if cmd=="import":
-##              send_message({'message':drive})
-##              sys.exit()
 
-            # 1. get a list of all .gpx files recursively under Garmin/GPX
+        # 1. get a list of .gpx files to import
+        # start with a list of all .gpx files recursively under Garmin/GPX
         gpx_files=[]
         for root, dirs, files in os.walk(os.path.join(drive,'Garmin','GPX')):
             for file in files:
                 if file.upper().endswith(".GPX") and not(file.startswith(".")):
                     gpx_files.append(os.path.join(root,file))
-        if debug:
-            logfile.write("Reading gpx files from device:")
-            logfile.write(str(gpx_files)+"\n")
 
+        # reverse chronological sort (most recent file is first in the list)
+        gpx_files=sorted(gpx_files,key=os.path.getmtime,reverse=True)
+        totalFileCount=len(gpx_files)
+                
+        # apply file filtering as specified in the extension options
+        if "method" in options:
+            if options["method"]=="recent" and "recentSel" in options:
+                # only get files m thru n (both are one-based) from the sorted list
+                #  (set m=1 by default; not currently specified in the options;
+                #    leave it here for forward compatibility using 'recentSelFirst')
+                m=1
+                if "recentSelFirst" in options:
+                    m=int(options["recentSelFirst"])
+                n=int(options["recentSel"])
+
+                # make sure 1<=n<=totalFileCount
+                n=max(1,min(n,totalFileCount))
+                # then make sure 1<=m<=n
+                m=max(1,min(m,n))
+                
+                if debug:
+                    logfile.write("Selecting files "+str(m)+" thru "+str(n)+" from a reverse-chronological-order sorted list...\n")
+                gpx_files=gpx_files[m-1:n]
+                
+            if options["method"]=="time" and "timeSel" in options:
+                currentTime=time.time()
+                if debug:
+                    logfile.write("Filtering out files older than "+options["timeSel"]+" hours...\n")
+                gpx_files=[f for f in gpx_files if (currentTime-os.path.getmtime(f))/3600<int(options["timeSel"])]    
+
+        if "size" in options:                
+            if options["size"]==True and "sizeSel" in options:
+                if debug:
+                    logfile.write("Filtering out files larger than "+options["sizeSel"]+"...\n")
+                # as long as sizeSel is in the format of <n>kb or <n>mb (case does not matter)
+                #  then the following line will filter correctly, i.e. '10kB' or '5MB'
+                gpx_files=[f for f in gpx_files if (os.path.getsize(f)<eval(options["sizeSel"].lower().replace("kb","*1024").replace("mb","*1048576")))]
+
+        # end of filtering
+        
+        # list the filtered file set
+        filteredFileCount=len(gpx_files)
+        if filteredFileCount == 0:
+            if debug:
+                logfile.write("No recent files out of " + str(totalFileCount) + " total gpx files on the device:\n")
+            send_message({'cmd': cmd, 'status': 'error', 'message': 'No GPX files out of '+str(totalFileCount)+' met the filter settings.  Click the GPSIO Extension icon for details.' })
+            sys.exit()
+        if debug:
+            logfile.write("Sending "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total gpx files on the device:\n")
+            logfile.write(str(gpx_files)+"\n")
+        
         # 2. use gpsbabel to combine the files and send to the extension
         args=[gpsbabel_exe,"-w","-r","-t","-i","gpx"]
         for gpx_file in gpx_files:
@@ -240,7 +291,8 @@ def transfer_gmsm(cmd,data,drive):
         else:
             if debug:
                 logfile.write("err: "+str(err)+"\n")
-            send_message({'cmd': cmd, 'status': 'ok', 'message': str(output.decode('latin-1')) })
+            note="Showing data from "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total GPX file(s).  Click the GPSIO Extension icon for details."
+            send_message({'cmd': cmd, 'status': 'ok', 'note': note, 'message': str(output.decode('latin-1')) })
     elif cmd=="export":
         gpx_fname=os.path.join(drive,'Garmin','GPX','gpsio'+time.strftime("%Y_%m_%d_%H%M%S")+'.gpx')
         gpx=open(gpx_fname,"w")

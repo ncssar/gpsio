@@ -1,13 +1,60 @@
 <!doctype html>
-<html>
+<html style="min-width:350px;max-width:350px;">
   <head>
-    <title>GPS I/IO</title>
+    <title>GPS I/O</title>
+    <link rel="stylesheet" type="text/css" href="popup.css">
     <script type="text/javascript" src="popup.js"></script>
   </head>
   <body>
-	  <div style="margin-bottom: 1em; width: 15em"><b>GPS I/O</b></div>
-	  <div id="condition_good" style="color: green; display: none">Plugin working properly</div>
-	  <div id="condition_bad" style="color: red">Cannot communicate with host</div>
-	  <div><button id="tryagain">check again</button></div>
+	  <table>
+	      <tr>
+	           <td><h1>GPS I/O</h1></td>
+	           <td style="padding-left:20px;">
+	  <div id="condition_good" style="color: green; display: none;">Plugin working properly</div>
+	  <div id="condition_bad" style="color: red;">Cannot communicate with host</div>
+      <div><button id="tryagain">check again</button></div>
+      </td></tr></table>
+      <div id="v0" style="display: none">
+      	You appear to be running an older version of the GPSIO host.  Upgrade at <a href="http://gpsio.caltopo.com" target="_blank">gpsio.caltopo.com</a> to improve import times through filtering larger datasets.
+      </div>
+      <div id="v1" style="display: none">
+      <table>
+            <tr>
+                <td><h2>Import Filter Settings&nbsp;</h2></td>
+                <td><button id="aboutButton">?</button></td>
+            </tr>
+        </table>
+	  <div id="about" class="overlay">
+	       <div class="popup">
+	           <a class="close" href="#">&times;</a>
+	           <p>These filter settings can normally be left alone.  They are intended to speed up GPSIO imports by filtering out irrelevant data files.</p>
+	           <p>Filters have no effect on older Garmin 'USB-Mode' devices such as GPSMap 60.</p>
+	           <p>Changes take effect immediately; there is nothing to 'save'.  If GPSIO import does not show the data you are looking for, relax these settings, then import again.</p>
+	       </div>
+	   </div>
+	  <h3>File modification time filtering method</h3>
+	  <input type="radio" name="method" id="time">Only import files modified within the last <select id="timeSel">
+            <option value="24">24</option>
+            <option value="48">48</option>
+            <option value="72">72</option>
+            <option value="96">96</option>
+        </select> hours<br>
+	  <input type="radio" name="method" id="recent">Only import the <select id="recentSel">
+	       <option value="1">1</option>
+	       <option value="2">2</option>
+	       <option value="3">3</option>
+	       <option value="4">4</option>
+	       <option value="5">5</option>
+	   </select> most recently modified file(s)<br>
+	  <input type="radio" name="method" id="all">Do not filter based on file time<br>
+	  <h3>Further filtering</h3>
+	  <input type="checkbox" id="size">Exclude files larger than <select id="sizeSel">
+            <option value="100kB">100kB</option>
+            <option value="250kB">250kB</option>
+            <option value="500kB">500kB</option>
+            <option value="1MB">1MB</option>
+        </select><br>
+      <div><button id="reset">Use defaults</button>&nbsp;<button id="close">Close</button></div>
+      </div>
   </body>
 </html>

@@ -34,7 +34,25 @@ var fn = function(request, sender, sendResponse) {
 			sendResponse({status: 'error', message: 'Unexpected disconnect'});
 		}
 	});
-	port.postMessage(request.data);
+	
+// always add the import options to the request, regardless of cmd
+    chrome.storage.local.get({
+        method:'time',
+        timeSel:'72',
+        recentSel:'3',
+        size:true,
+        sizeSel:'100kB'
+    }, function(items) {
+        console.log("options retrieved:");
+        console.log(items);
+        request.data.options=items;
+        console.log("about to send using port.postMessage:");
+        console.log(request.data);
+        // need to post the message asynchronously (here in the local.get callback)
+        //  to make sure request.data includes options
+        port.postMessage(request.data);
+   });
+
 	return true;
 }
 
