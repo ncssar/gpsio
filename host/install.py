@@ -19,18 +19,20 @@ DEFAULT_HOST_LOCATION = {
 
 DEFAULT_GPSBABEL_DIR = {
     'win32': 'GPSBabel',
-    'darwin': 'GPSBabelFE.app'
+    'darwin': 'GPSBabelFE.app',
+    'linux': '/usr/bin'
 }
 
 DEFAULT_GPSBABEL_NAME = {
     'win32': 'gpsbabel.exe',
-    'darwin': 'contents/MacOS/gpsbabel'
+    'darwin': 'contents/MacOS/gpsbabel',
+    'linux': 'gpsbabel'
 }
 
 DEFAULT_GPSBABEL_SEARCHPOINTS = {
 	'win32': ['c:/Program Files','c:/Program Files (x86)','c:/GPSBabel'],
 	'darwin': ['/Applications',os.path.join(os.path.expanduser('~'), 'Applications')],
-	'linux': ['/']
+	'linux': ['/usr/bin']
 }
 
 MANIFEST_INSTALL_LOCATION_CHROME = {
