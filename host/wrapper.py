@@ -18,10 +18,13 @@ import subprocess
 import sys
 import json
 import os
+import mmap
 import time
 import xml.dom.minidom
 
 GDXML_FILENAME="Garmin/GarminDevice.xml"
+GPXTRKX_TEXT=b'xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"'
+GPXTRKX_LENGTH=len(GPXTRKX_TEXT)
 
 # quick way to read a user-configurable options file config.py
 #  which must set values for these variables:
@@ -35,6 +38,7 @@ from config import *
 debug_path=os.path.expanduser("~")
 if debug:
     logfile=open(os.path.join(debug_path,"gpsio_log.txt"),"w")
+    logfile.write("GPSIO invoked at "+time.strftime("%a %d %b %Y %H:%M:%S")+"\n")
     logfile.write("Python="+sys.version+"\n")
     logfile.write("platform="+sys.platform+"\n")
     logfile.write("arguments:"+str(sys.argv)+"\n")
@@ -152,6 +156,23 @@ def Main():
         logfile.write("rq.cmd:"+cmd+"\n")
         logfile.write("rq.target:"+target+"\n")
 
+# ensure_gpxtrkx: if needed, add 'xmlns:gpxtrkx...' to the original file
+def ensure_gpxtrkx(filename):
+    logfile.write("Checking "+filename+" for 'xmlns:gpxtrkx' ... ")
+    with open(filename,mode='r+',encoding='utf-8') as f:
+        with mmap.mmap(f.fileno(),0,access=mmap.ACCESS_WRITE) as mm:
+            if mm.find(b'xmlns:gpxtrkx')<0:
+                logfile.write("not found in original file.")
+                orig_size=mm.size()
+                offset=mm.find(b'xmlns:')
+                mm.resize(orig_size+GPXTRKX_LENGTH+1)
+                mm.move(offset+GPXTRKX_LENGTH+1,offset,orig_size-offset)
+                mm.seek(offset)
+                mm.write(GPXTRKX_TEXT+b' ')
+                logfile.write("  Inserted at offset "+str(offset)+"\n")
+            else:
+                logfile.write("found.\n")
+
 # step 1: find the connected device (i.e. the connected drive)
 #  return value: full filename of the first <drive>:\Garmin\GarminDevice.xml
 #     file that was found, or False if none was found, indicating no Garmin
@@ -223,7 +244,9 @@ def transfer_gmsm(cmd,data,drive,options):
         for root, dirs, files in os.walk(os.path.join(drive,'Garmin','GPX')):
             for file in files:
                 if file.upper().endswith(".GPX") and not(file.startswith(".")):
-                    gpx_files.append(os.path.join(root,file))
+                    fullpath=os.path.join(root,file)
+                    ensure_gpxtrkx(fullpath)
+                    gpx_files.append(fullpath)
 
         # reverse chronological sort (most recent file is first in the list)
         gpx_files=sorted(gpx_files,key=os.path.getmtime,reverse=True)
