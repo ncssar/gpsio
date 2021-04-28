@@ -48,9 +48,10 @@ GPSIO is free software (GPL) and is hosted at https://github.com/ncssar/gpsio. C
 ## Troubleshooting / debugging - IN PROGRESS
 You tried to install GPSIO but it's not working... what now?  Troubleshooting GPSIO is tricky because it has multiple parts.  Here are some troubleshooting guidelines:
 1. Do you see the GPSIO extension icon (currently, an odd squished blue-and-gray thing that is supposed to look like an old GPS) at the top right of your browser window, alongside any other extension icons?
-    YES: go to the next step
-    NO: the browser extension (Chrome or Firefox) hasn't been installed; see the installation steps above.  If that doesn't solve it, contact the developer with these details.
+    - YES: go to the next step
+    - NO: the browser extension (Chrome or Firefox) hasn't been installed; see the installation steps above.  If that doesn't solve it, contact the developer with these details.
 2. Left-click the GPSIO extension icon.  A small popup box should appear near the extension icon.  Does it have a red line of text that says 'Cannot communicate with host', or, a green line of text that says 'Plugin working properly' with a selection of filter options?
-    RED: left-click 'check again' once or twice.  If the red line doesn't go away, go to the next step.
-    GREEN: contact the developer with exact details of the error you're seeing.
-3. Open a command terminal, go to the default gpsio installation directory (normally, the 'gpsio' directory under your user home directory), and run wrapper.py using python.
+    - RED: left-click 'check again' once or twice.  If the red line doesn't go away, go to the next step.
+    - GREEN: contact the developer with exact details of the error you're seeing.
+3. Open a command terminal, go to the default gpsio installation directory (normally, the 'gpsio' directory under your user home directory), and run wrapper.py using python.  Any error messages in the first part of wrapper.py will show up here, but most of the code relies on being run through the browser so won't be tested by running it from the command line.
+4. If you see 'Reading data from GPS . . .' folled by a bold red line 'GPS Exception: Unexpected disconnect' when you try to import using GPSIO, check the GPSIO log file (normally gpsio_log.txt in your home directory).  This indicates that wrapper.py encountered an error, which will hopefully show up in the log file.
