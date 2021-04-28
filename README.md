@@ -44,3 +44,13 @@ For the time being, GPSIO installation is a multi-step process that requires a b
 
 ## Contributing
 GPSIO is free software (GPL) and is hosted at https://github.com/ncssar/gpsio. Contributions are welcome; two high priority items are Linux installation support and integration with non-Garmin GPSs (either through auto-detection or a user-selectable GPS type dropdown). Testing with additional GPS units is also valuable; send bug reports to info@caltopo.com.
+
+## Troubleshooting / debugging - IN PROGRESS
+You tried to install GPSIO but it's not working... what now?  Troubleshooting GPSIO is tricky because it has multiple parts.  Here are some troubleshooting guidelines:
+1. Do you see the GPSIO extension icon (currently, an odd squished blue-and-gray thing that is supposed to look like an old GPS) at the top right of your browser window, alongside any other extension icons?
+    YES: go to the next step
+    NO: the browser extension (Chrome or Firefox) hasn't been installed; see the installation steps above.  If that doesn't solve it, contact the developer with these details.
+2. Left-click the GPSIO extension icon.  A small popup box should appear near the extension icon.  Does it have a red line of text that says 'Cannot communicate with host', or, a green line of text that says 'Plugin working properly' with a selection of filter options?
+    RED: left-click 'check again' once or twice.  If the red line doesn't go away, go to the next step.
+    GREEN: contact the developer with exact details of the error you're seeing.
+3. Open a command terminal, go to the default gpsio installation directory (normally, the 'gpsio' directory under your user home directory), and run wrapper.py using python.
