@@ -21,6 +21,7 @@ import os
 import mmap
 import time
 import xml.dom.minidom
+import re
 
 GDXML_FILENAME="Garmin/GarminDevice.xml"
 GPXTRKX_TEXT=b'xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"'
@@ -31,6 +32,8 @@ GPXTRKX_LENGTH=len(GPXTRKX_TEXT)
 #  gpsbabel_exe - full filename of the gpsbabel executable file
 #  chunk_size - integer less than 1e6; must be <1MB per Chrome spec
 #  debug - True or False to enable logging file
+
+debug=False # initialize the value to make the IDE happy
 
 from config import *
 
@@ -100,6 +103,9 @@ def Main():
     if debug:
         logfile.write("request="+type(request).__name__+":"+str(request)+"\n")
 
+    # hardcode until this selection can be added to the extension GUI (and the options dict)
+    removeNumberFromAssignmentNames=True
+
     # validate and parse the request
     rq = json.loads(request)
     if "cmd" in rq:
@@ -108,11 +114,38 @@ def Main():
         if cmd=="export":
             if "data" in rq:
                 data=rq["data"]
+                if removeNumberFromAssignmentNames:
+                    # Since assignment boundary tracks are indistinguishable from non-assignment
+                    #  tracks in GPX, we should make this as specific as possible:
+                    # 
+                    # If the name has two 'words' (groups of non-space characters separated by a space)
+                    #  then remove the space and the second word only if the second word is a number.
+                    #  
+                    # (e.g. we want to change 'AA 101' to 'AA', but we want to preserve 'My track')
+
+                    #  PITFALLS of this method:
+                    #  - This represents a difference in generated output between Export-GPSIO and Export-GPX.
+                    #      So, if one GPS device is written using Export-GPSIO, but another GPS device
+                    #      is written using Export-GPX, they will see different track names in the field,
+                    #      and the goal of reducing confusion will be negated.
+                    #  - There could still be unintentionally modified names, e.g. 'Track 3' would be changed to 'Track'.
+                    #  - This would not work if the second word contains letters (e.g. team 103b)
+                    #
+                    # As of 10-5-21, non-assignment tracks (lines) have a GPX extension to specify
+                    #  the track color, but this could change at any time, so may not be a reliable
+                    #  filter criteria, and it would take more complex parsing to identify:
+                    #  <trk><name>joe</name><extensions><gpxx:TrackExtension><gpxx:DisplayColor>Red
+                    #    </gpxx:DisplayColor></gpxx:TrackExtension></extensions><trkseg>...
+                    
+                    pattern=r'<trk><name>([^ ]*) [0-9]*</name>'
+                    repl=r'<trk><name>\1</name>'
+                    data=re.sub(pattern,repl,data)
+
             else:
                 send_message({'cmd': 'export', 'status': 'error', 'message': 'when \'cmd\' is \'export\', \'data\' must be specified in the JSON request'})
                 sys.exit()
     else:
-        send_message({'cmd': cmd, 'status': 'error', 'message': 'must specify \'cmd\' in the JSON request'})
+        send_message({'cmd': 'NONE', 'status': 'error', 'message': 'must specify \'cmd\' in the JSON request'})
         sys.exit()
 
     if cmd == "ping-host":
@@ -236,6 +269,9 @@ def transfer_gmsm(cmd,data,drive,options):
         #   unplug and delete all of the items that were exported from caltopo; then
         #    re-plug: that Imported_ file no longer exists.
 
+    if debug:
+        logfile.write("inside transfer_gmsm\n")
+
     if cmd=="import":
 
         # 1. get a list of .gpx files to import
@@ -251,7 +287,13 @@ def transfer_gmsm(cmd,data,drive,options):
         # reverse chronological sort (most recent file is first in the list)
         gpx_files=sorted(gpx_files,key=os.path.getmtime,reverse=True)
         totalFileCount=len(gpx_files)
-                
+        
+        if totalFileCount == 0:
+            if debug:
+                logfile.write("No GPX files were found on the device.\n")
+            send_message({'cmd': cmd, 'status': 'error', 'message': 'No GPX files were found on the device.' })
+            sys.exit()
+
         # apply file filtering as specified in the extension options
         if "method" in options:
             if options["method"]=="recent" and "recentSel" in options:
@@ -317,7 +359,13 @@ def transfer_gmsm(cmd,data,drive,options):
             note="Showing data from "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total GPX file(s).  Click the GPSIO Extension icon for details."
             send_message({'cmd': cmd, 'status': 'ok', 'note': note, 'message': str(output.decode('latin-1')) })
     elif cmd=="export":
+        gpx_dir=os.path.join(drive,'Garmin','GPX')
+        if not os.path.exists(gpx_dir):
+            send_message({'cmd': cmd, 'status': 'error', 'message': 'GPS located at '+str(drive)+': but Garmin/GPX directory was not found'})
+            sys.exit()
         gpx_fname=os.path.join(drive,'Garmin','GPX','gpsio'+time.strftime("%Y_%m_%d_%H%M%S")+'.gpx')
+        if debug:
+            logfile.write("gpx_fname="+str(gpx_fname)+'\n')
         gpx=open(gpx_fname,"w")
         gpx.write(data)
         gpx.close
@@ -344,7 +392,11 @@ def transfer_gpsbabel(cmd,data,target):
     if debug:
         logfile.write("invoking: "+str(args)+"\n")
     p=subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if debug:
+        logfile.write("  subprocess object created... ")
     output, err = p.communicate(data)
+    if debug:
+        logfile.write("  subprocess communcation complete.\n")
 
     # if no usb device is found, err will be a multi-line string like this:
 
@@ -366,7 +418,7 @@ def transfer_gpsbabel(cmd,data,target):
     if err:
         err=str(err.decode('latin-1'))
         if debug:
-            logfile.write("err: "+str(err.decode('latin-1')))
+            logfile.write("err: "+err)
         if "The system cannot find the path specified." in err or "The device is not ready." in err:
             send_message({'cmd': cmd, 'status':'error','message':'no GPS was found'})
         else:
