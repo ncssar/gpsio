@@ -1,20 +1,13 @@
 {
-  "manifest_version": 2,
-  
+  "manifest_version": 3,
+ 
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxwhxwgos4hy76msFU7sjUpLBBKppgaNriP9uAesOOPgqCwg8UOxhmgRMNZspxP4aawvQ0+/mD3WRbW/OmvR6pifPMcPFlHreQLH4tP1q0lZO0pkZSewxMfW/wRIhzO4yAskOv2FyxYglJWMt3+uXCaZ13IFuXRBthx9sfDEKibkzhyo7Tp6JLQ8zK2HVWGs/z0zZx+hHenqQYvHCX9HDWpd6Bv00PVF4XZyf5h/PL/ITF5kcTOUJ96X4mdm90+mKixbpSO2XnVTJCFIyy0aLXqOLJ2vVQh4UjimJQoiXvGp65pEF4ngc6ijaDOz3rsvQNKvGwMgfkmDLRyL7zA4SnwIDAQAB",
-
-  "applications": {
-    "gecko": {
-      "id": "gpsio@caltopo.com",
-      "strict_min_version": "50.0"
-    }
-  },
-  
+ 
   "name": "gpsio",
   "description": "GPS IO",
-  "version": "0.0.8",
+  "version": "1.0",
   
-  "browser_action": {
+  "action": {
     "default_icon": "gps.png",
     "default_popup": "popup.html"
    },
@@ -24,7 +17,7 @@
     ],
   
   "background": {
-    "scripts": ["background.js"]
+    "service_worker": "background.js"
   },
     
   "content_scripts": [{"matches": ["https://*/*","http://*/*"], "js": ["content_script.js"]}]
