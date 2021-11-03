@@ -1,16 +1,19 @@
 {
   "manifest_version": 3,
- 
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxwhxwgos4hy76msFU7sjUpLBBKppgaNriP9uAesOOPgqCwg8UOxhmgRMNZspxP4aawvQ0+/mD3WRbW/OmvR6pifPMcPFlHreQLH4tP1q0lZO0pkZSewxMfW/wRIhzO4yAskOv2FyxYglJWMt3+uXCaZ13IFuXRBthx9sfDEKibkzhyo7Tp6JLQ8zK2HVWGs/z0zZx+hHenqQYvHCX9HDWpd6Bv00PVF4XZyf5h/PL/ITF5kcTOUJ96X4mdm90+mKixbpSO2XnVTJCFIyy0aLXqOLJ2vVQh4UjimJQoiXvGp65pEF4ngc6ijaDOz3rsvQNKvGwMgfkmDLRyL7zA4SnwIDAQAB",
- 
+
   "name": "gpsio",
   "description": "GPS IO",
   "version": "1.0",
   
   "action": {
-    "default_icon": "gps.png",
+    "default_icon": "gpsio_icon_16.png",
     "default_popup": "popup.html"
-   },
+  },
+
+  "icons": { "16": "gpsio_icon_16.png",
+    "48": "gpsio_icon_48.png",
+   "128": "gpsio_icon_128.png"
+  },
 
   "permissions": [
     "nativeMessaging","storage"
