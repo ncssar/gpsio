@@ -13,6 +13,39 @@ OutFile "install-gpsio.exe"
 !define CHROME_EXTENSIONS_FOLDER "$LOCALAPPDATA\Google\Chrome\User Data\Default\Extensions"
 !define REGISTRY_BASE_KEY "SOFTWARE\WOW6432Node\Google\Chrome\Extensions"
 !define REGISTRY_FULL_KEY "${REGISTRY_BASE_KEY}\${EXTENSION_ID}"
+!define UNINSTALL_ROOT "SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+
+;CheckUninstallKey - checks to see if there is an uninstall key with specified entry name and value
+;  return value of 'NOT FOUND' or 'FOUND!' is passed on the stack
+!macro CheckUninstallKey entryName entryVal
+    DetailPrint "Checking for uninstall key:"
+    DetailPrint "  entry name:${entryName}  entry value:${entryVal}"
+    !define ID ${__LINE__} ; get around duplicated labels; see https://nsis.sourceforge.io/Macro_vs_Function example 3.1.3
+    StrCpy $0 0
+    StrCpy $4 "NOT FOUND" ; default result
+    loop_${ID}:
+        EnumRegKey $1 HKLM "${UNINSTALL_ROOT}" $0
+        StrCmp $1 "" done_${ID} ; empty string indicates no more entries
+        ; DetailPrint "  Loop iteration $0: $1"
+        ClearErrors
+        ReadRegStr $2 HKLM "${UNINSTALL_ROOT}\$1" "${entryName}"
+        IfErrors 0 keyexists_${ID} ; if the specified sub-key does not exist
+            ; DetailPrint "    no such entry"
+            Goto next_${ID}
+        keyexists_${ID}: ; else
+            ; DetailPrint "    ${entryName}=$2"
+            StrCmp $2 "${entryVal}" found_${ID} ; this is not a regular expression - exact match required
+        next_${ID}:
+            IntOp $0 $0 + 1
+            Goto loop_${ID}
+        found_${ID}:
+            StrCpy $4 "FOUND!"
+            DetailPrint "    FOUND under key $1"
+    done_${ID}:
+        DetailPrint "  loop complete: $4"
+        Push $4
+        !undef ID ; see comment on !define ID above
+!macroend
 
 ; 1. is the extension already installed?
 ;      look for a folder whose name is EXTENSION_ID, in the user's extensions dir
@@ -25,30 +58,44 @@ OutFile "install-gpsio.exe"
 
 Section "Chrome Extension"
     ; 1. is the extension already installed?
-    IfFileExists "${CHROME_EXTENSIONS_FOLDER}\${EXTENSION_ID}" 0 nofile
+    IfFileExists "${CHROME_EXTENSIONS_FOLDER}\${EXTENSION_ID}" 0 nofile1
         MessageBox MB_OK "It appears the extension is already installed for this user."
         Goto extension_done
-    nofile:
+    nofile1:
         ; test for existence of attempted install-via-registry; see https://nsis-dev.github.io/NSIS-Forums/html/t-288318.html
         ClearErrors
         EnumRegKey $0 HKLM "${REGISTRY_FULL_KEY}" "update_url"
-        IfErrors 0 keyexists
+        IfErrors 0 keyexists2
             MessageBox MB_OK "Registry key does not exist - click OK to add it..."
             WriteRegStr HKLM "${REGISTRY_FULL_KEY}" "update_url" "https://clients2.google.com/service/update2/crx"
             MessageBox MB_OK "Registry key added.  Chrome may prompt you to enable the extension."
             Goto extension_done
-        keyexists:
+        keyexists2:
             MessageBox MB_OK "Registry key already exists, but it does not appear that the extension is installed for this user.  You will need to install the GPSIO extension to Chrome by hand."
     ;        DeleteRegKey HKLM "${REGISTRY_FULL_KEY}"
-extension_done:
+    extension_done:
 SectionEnd
 
 Section "GPSBabel"
-    MessageBox MB_OK "GPSBabel: Click OK.  Nothing here yet."
+    ; is it already installed? test for registry entry
+    ;  the GPSBabel installer doesn't check to see if it's already installed,
+    ;   and it doesn't let you specify the installation directory.
+    ;  if installed, these keys should exist:
+    ;  HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{blahblah}
+    ;     (there are lots of these - one per installed item - one of them should have DisplayName = "GPSBabel <version>")
+    ;     (the correct one will have the installation directory)
+    ;  HKEY_USERS\blahblah\SOFTWARE\GPSBabel - this has sub-keys GPSBabel (with a bunch of settings) and GPSBabelFE (empty)
+    ;  and a handful of other registry entries that seem more temporary / less robust;
+    ;  maybe easier to just look for the executable in the standard installation directory?
+    !insertMacro CheckUninstallKey "DisplayName" "GPSBabel 1.7.0"
+    Pop $0
+    MessageBox MB_OK "GPSBabel: $0"
 SectionEnd
 
 Section "Garmin USB Drivers"
-    MessageBox MB_OK "Garmin USB Drivers: Click OK.  Nothing here yet."
+    !insertMacro CheckUninstallKey "DisplayName" "Garmin USB Drivers"
+    Pop $0
+    MessageBox MB_OK "Garmin USB Drivers: $0"
 SectionEnd
 
 Section "Native Host"
