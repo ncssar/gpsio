@@ -5,6 +5,7 @@
 
 Name "GPSIO"
 OutFile "install-gpsio.exe"
+InstallDir "$PROFILE\install-gpsio-out"
 
 ; Hardcoded ID for a simple test extension: JSONView
 !define EXTENSION_ID "chklaanhfefbnpoihckbnefhakgolnmc"
@@ -46,6 +47,10 @@ OutFile "install-gpsio.exe"
         Push $4
         !undef ID ; see comment on !define ID above
 !macroend
+
+Section "Startup"
+    SetOutPath "$INSTDIR"
+SectionEnd
 
 ; 1. is the extension already installed?
 ;      look for a folder whose name is EXTENSION_ID, in the user's extensions dir
@@ -89,13 +94,23 @@ Section "GPSBabel"
     ;  maybe easier to just look for the executable in the standard installation directory?
     !insertMacro CheckUninstallKey "DisplayName" "GPSBabel 1.7.0"
     Pop $0
-    MessageBox MB_OK "GPSBabel: $0"
+    DetailPrint "GPSBabel: $0"
+    StrCmp $0 "FOUND!" gpsbabel_done
+        MessageBox MB_OK "Click OK to launch the GPSBabel Installer..."
+        File "prerequisites\GPSBabel-1.7.0-Setup.exe"
+        ExecWait "$OUTDIR\GPSBabel-1.7.0-Setup.exe"
+    gpsbabel_done:
 SectionEnd
 
 Section "Garmin USB Drivers"
     !insertMacro CheckUninstallKey "DisplayName" "Garmin USB Drivers"
     Pop $0
-    MessageBox MB_OK "Garmin USB Drivers: $0"
+    DetailPrint "Garmin USB Drivers: $0"
+    StrCmp $0 "FOUND!" usb_done
+        MessageBox MB_OK "Click OK to launch the Garmin USB Drivers Installer..."
+        File "prerequisites\USBDrivers_2312.exe"
+        ExecWait "$OUTDIR\USBDrivers_2312.exe"
+    usb_done:
 SectionEnd
 
 Section "Native Host"
