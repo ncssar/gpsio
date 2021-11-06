@@ -1,2 +1,2 @@
 @echo off
-call python.exe "%~dp0\gpsio-host.py"
+call "%~dp0\dist\gpsio-host\gpsio-host.exe"
