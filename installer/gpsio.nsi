@@ -1,17 +1,21 @@
 ; GPSIO installer
 ; github.com/ncssar/gpsio
 
+; TODO: replace the temp ID afgce... (old gpsio extension) when new one is published
+; TODO: install firefox extension
+; TODO: general cleanup and UI/UX work
+; TODO: test, get feedback
+
 ; !include "MUI.nsh"
 
 Name "GPSIO"
 OutFile "install-gpsio.exe"
-InstallDir "$PROFILE\gpsio"
+InstallDir "$PROGRAMFILES32\GPSIO"
 
 ; ReplaceInFile - see https://nsis.sourceforge.io/ReplaceInFile
 !include StrRep.nsh
 !include ReplaceInFile.nsh
 
-; TODO - replace the temp ID afgce... (old gpsio extension) when new one is published
 !define EXTENSION_ID "afgcejeehpnhafgikkimogllebbgegck"
 !define CHROME_EXTENSIONS_FOLDER "$LOCALAPPDATA\Google\Chrome\User Data\Default\Extensions"
 !define CHROME_REGISTRY_BASE_KEY "SOFTWARE\WOW6432Node\Google\Chrome\Extensions"
@@ -55,8 +59,6 @@ Var INSTDIR_DOUBLE_SLASH
         !undef ID ; see comment on !define ID above
 !macroend
 
-; TODO: prompt for install dir
-
 Section "Startup"
     SetOutPath "$INSTDIR"
     StrCpy $GPSBABEL_EXE_PATH "DEFAULT" ; to avoid warning during compile
@@ -65,17 +67,8 @@ Section "Startup"
       ; (necessary to find Garmin USB drivers)
 SectionEnd
 
-; 1. is the extension already installed?
-;      look for a folder whose name is EXTENSION_ID, in the user's extensions dir
-; 1a. if yes, skip to 2
-; 1b. if no, check to see if install via registry has already been attempted
-; 1b1. if yes, show a warning message that extension install failed, user must install by hand, skip to 2
-; 1b2. if no, add the registry entry to attemp extension installation
-; 2. check again and let the user know if the extension is apparently installed (is Chrome restart required??)
-; 3. 
-
 Section "Chrome Extension"
-    ; 1. is the extension already installed?
+    ; is the extension already installed?
     IfFileExists "${CHROME_EXTENSIONS_FOLDER}\${EXTENSION_ID}" 0 nofile1
         MessageBox MB_OK "It appears the extension is already installed for this user."
         Goto extension_done
