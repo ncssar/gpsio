@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
-# wrapper.py - gpsio Python script to communicate with GPSBabel;
+# gpsio-host.py - gpsio Python script to communicate with GPSBabel;
 #  output from this wrapper script is sent over stdio to background.js
 
 # In Linux, this file is executable and can be called directly;
-#  in Windows, this file must be called from wrapper.bat,
+#  in Windows, this file must be called from gpsio-host.bat,
 #  which is registered in nmh_manifest.json
 #
 # stdin and stdout from this code will communicate directly with
 #  GPSBabel and background.js; so, to watch errors for debugging,
-#  wrapper.py should redirect stderr only, like this for Windows:
-# python "%~dp0\wrapper.py" %* 2> C:\wrapper_errors.txt
+#  gpsio-host.py should redirect stderr only, like this for Windows:
+# python "%~dp0\gpsio-host.py" %* 2> C:\gpsio-host_errors.txt
 
 
 import struct
@@ -22,29 +22,42 @@ import mmap
 import time
 import xml.dom.minidom
 import re
+import configparser
 
 GDXML_FILENAME="Garmin/GarminDevice.xml"
 GPXTRKX_TEXT=b'xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"'
 GPXTRKX_LENGTH=len(GPXTRKX_TEXT)
 
-# quick way to read a user-configurable options file config.py
-#  which must set values for these variables:
+# quick way to read a user-configurable options file gpsio.ini
+#  which must set these vales in the 'gpsio-host' section:
 #  gpsbabel_exe - full filename of the gpsbabel executable file
 #  chunk_size - integer less than 1e6; must be <1MB per Chrome spec
 #  debug - True or False to enable logging file
 
-debug=False # initialize the value to make the IDE happy
+debug=False # initialize the value to make the IDE happy - override in gpsio.ini
 
-from config import *
+config=configparser.ConfigParser()
+config.read('gpsio-host.ini')
+
+debug=config['gpsio-host']['debug']
+chunk_size=int(config['gpsio-host']['chunk_size'])
+gpsbabel_exe=config['gpsio-host']['gpsbabel_exe']
 
 # write debug files, if any, to cross-platform user's home directory
 debug_path=os.path.expanduser("~")
 if debug:
-    logfile=open(os.path.join(debug_path,"gpsio_log.txt"),"w")
-    logfile.write("GPSIO invoked at "+time.strftime("%a %d %b %Y %H:%M:%S")+"\n")
+    logfile=open(os.path.join(debug_path,"gpsio-host_log.txt"),"w")
+    logfile.write("GPSIO Host invoked at "+time.strftime("%a %d %b %Y %H:%M:%S")+"\n")
     logfile.write("Python="+sys.version+"\n")
+    logfile.write("GPSBabel executable="+gpsbabel_exe+"\n")
+    logfile.write("data transfer chunk size="+str(chunk_size)+"\n")
     logfile.write("platform="+sys.platform+"\n")
     logfile.write("arguments:"+str(sys.argv)+"\n")
+
+if not os.path.isfile(gpsbabel_exe):
+    if debug:
+        logfile.write("ERROR: specified gpsbabel_exe "+gpsbabel_exe+" is not a file.  Exiting.\n")
+    sys.exit()
 
 # reopen stdout and stdin in bytes mode, for 2.7/3.3 compatibility
 # Q: is this a win32 thing only or a python 3 thing only?
@@ -354,7 +367,7 @@ def transfer_gmsm(cmd,data,drive,options):
         if err != None and len(err) > 2:
             send_message({'cmd': cmd, 'status': 'error', 'message': str(err.decode('latin-1')) })
         else:
-            if debug:
+            if err!=b'' and debug:
                 logfile.write("err: "+str(err)+"\n")
             note="Showing data from "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total GPX file(s).  Click the GPSIO Extension icon for details."
             send_message({'cmd': cmd, 'status': 'ok', 'note': note, 'message': str(output.decode('latin-1')) })
