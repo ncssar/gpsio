@@ -114,9 +114,19 @@ Section "Garmin USB Drivers"
 SectionEnd
 
 Section "Native Host"
-    MessageBox MB_OK "Native Host: Click OK.  Nothing here yet."
+    MessageBox MB_OK "Click OK to install the native host..."
+    SetOutPath "$PROFILE\gpsio_install_test"
+    File /r "..\host\dist"
+    File "..\host\gpsio-host.ini"
+    File "..\host\gpsio-host.bat"
+    File "..\host\README.txt"
+    ; TODO: edit gpsio-host.ini with confirmed gpsbabel executable path
+    ; TODO: generate chrome-manifest.json and firefox-manifest.json
+    ; TODO: edit registry, to register the native host manifest location
+    ; TODO: set correct install path
 SectionEnd
 
 Section "Complete"
+    ; TODO: delete temp files (GPSBabel installer, Garmin USB driver installer)
     MessageBox MB_OK "Installation complete!"
 SectionEnd
