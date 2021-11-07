@@ -6,6 +6,16 @@ GPSIO is a replacement for the Garmin Communicator plugin, built on open web sta
 
 Supported browsers are Chrome and Firefox. Supported OSs are Mac, Windows and (soon) Linux, though currently there is only a Windows installer.  Installation on Mac will be more manual - see 'Installing the GPSIO Extension' below.
 
+## Using GPSIO
+The only part of GPSIO that the user normally sees is the transfer method selection after clicking Export or Import in CalTopo / SARTopo / CalTopo-Desktop.  The user can also click the extension icon, at the top right of the web browser, to show and modify the GPSIO data filter settings.  See below for more details.
+
+## GPSIO Architecture
+GPSIO requires multiple parts to all be working together.  See the installation details below.
+1. Extension - The GPSIO browser extension allows the web page to commuicate with the host. 
+2. Host - The extension uses 'Native Messaging' to talk with the 'host' program, which runs on the same computer as the web browser.  You can read about Native Messaging online.  The host program is written in Python, but is compiled to an executable file so that a complete Python installation is no longer needed.
+3. GPSBabel - The host, in turn, may call GPSBabel to talk with the GPS device, and to organize imported data.
+4. Garmin USB Drivers - For older devices, the Garmin USB Drivers are necessary to allow the GPS device to work with the computer.
+
 ## Garmin GPS Types
 1. GMSM - Most of the modern Garmin handlheld GPS devices use Garmin Mass Storage Mode (GMSM) to transfer data: the device will automatically show up as another drive a few seconds after you plug it in - as if you plugged in a thumb drive.  For these devices, GPSIO is just a wrapper around the normal file selection and transfer actions, though GPSIO does provide the additional filters that you see in the options popup, and it will automatically import multiple files as appropriate.  So, GPSIO can potentially provide a more streamlined, consistent, and trainable import and export experience, saving a couple of clicks each time, and avoiding the need to sort through files during import.  In the hands of an experienced savvy operator, this may not be of much benefit.
 
