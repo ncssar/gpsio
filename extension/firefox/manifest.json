@@ -1,0 +1,40 @@
+{
+  "manifest_version": 2,
+  "name": "gpsio",
+  "description": "GPS IO",
+  "version": "1.0.1",
+  "browser_action": {
+    "default_icon": "gpsio_icon_16.png",
+    "default_popup": "popup.html"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{5da30c55-01fd-4045-a0d2-41c47ebc8b83}"
+    }
+  },
+  "icons": {
+    "16": "gpsio_icon_16.png",
+    "48": "gpsio_icon_48.png",
+    "128": "gpsio_icon_128.png"
+  },
+  "permissions": [
+    "nativeMessaging",
+    "storage"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": [
+        "content_script.js"
+      ]
+    }
+  ]
+}

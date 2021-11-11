@@ -1,8 +1,8 @@
 ; GPSIO installer
 ; github.com/ncssar/gpsio
 
-; TODO: replace the temp ID afgce... (old gpsio extension) when new one is published
 ; TODO: install firefox extension
+; TODO: install edge extension
 ; TODO: general cleanup and UI/UX work
 ; TODO: test, get feedback
 
@@ -16,10 +16,11 @@ InstallDir "$PROGRAMFILES32\GPSIO"
 !include StrRep.nsh
 !include ReplaceInFile.nsh
 
-!define EXTENSION_ID "afgcejeehpnhafgikkimogllebbgegck"
+!define CHROME_EXTENSION_ID "cbpembjdolhcjepjgdkcflipfojbjall"
 !define CHROME_EXTENSIONS_FOLDER "$LOCALAPPDATA\Google\Chrome\User Data\Default\Extensions"
 !define CHROME_REGISTRY_BASE_KEY "SOFTWARE\WOW6432Node\Google\Chrome\Extensions"
-!define CHROME_REGISTRY_FULL_KEY "${CHROME_REGISTRY_BASE_KEY}\${EXTENSION_ID}"
+!define CHROME_REGISTRY_FULL_KEY "${CHROME_REGISTRY_BASE_KEY}\${CHROME_EXTENSION_ID}"
+!define FIREFOX_EXTENSION_ID "{5da30c55-01fd-4045-a0d2-41c47ebc8b83}"
 !define UNINSTALL_ROOT "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
 !define UNINSTALL_WOW_ROOT "SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
 
@@ -69,7 +70,7 @@ SectionEnd
 
 Section "Chrome Extension"
     ; is the extension already installed?
-    IfFileExists "${CHROME_EXTENSIONS_FOLDER}\${EXTENSION_ID}" 0 nofile1
+    IfFileExists "${CHROME_EXTENSIONS_FOLDER}\${CHROME_EXTENSION_ID}" 0 nofile1
         MessageBox MB_OK "It appears the extension is already installed for this user."
         Goto extension_done
     nofile1:
@@ -138,6 +139,7 @@ Section "Native Host"
     File /r "..\host\dist"
     File "..\host\gpsio-host.ini"
     File "..\host\gpsio-host.bat"
+    File "..\host\gpsio-host.py"
     File "README.txt" ; not the same as README.md which is for the GitHub repo page
 
     ; generate chrome-manifest.json and firefox-manifest.json
@@ -145,11 +147,11 @@ Section "Native Host"
     ;  1 - \ is an escape character in json; use \\ instead
     ;  2 - must have a trailing slash / at the end of the extension ID
     FileOpen $0 $INSTDIR\chrome-manifest.json w
-    FileWrite $0 '{$\n  "name": "com.caltopo.gpsio",$\n  "description": "GPS IO",$\n  "path": "$INSTDIR_DOUBLE_SLASH\\gpsio-host.bat",$\n  "type": "stdio",$\n  "allowed_origins": [$\n    "chrome-extension://${EXTENSION_ID}/"$\n  ]$\n}'
+    FileWrite $0 '{$\n  "name": "com.caltopo.gpsio",$\n  "description": "GPS IO",$\n  "path": "$INSTDIR_DOUBLE_SLASH\\gpsio-host.bat",$\n  "type": "stdio",$\n  "allowed_origins": [$\n    "chrome-extension://${CHROME_EXTENSION_ID}/"$\n  ]$\n}'
     FileClose $0
 
     FileOpen $0 $INSTDIR\firefox-manifest.json w
-    FileWrite $0 '{$\n  "name": "com.caltopo.gpsio",$\n  "description": "GPS IO",$\n  "path": "$INSTDIR_DOUBLE_SLASH\\gpsio-host.bat",$\n  "type": "stdio",$\n  "allowed_extensions": [$\n    "gpsio@caltopo.com"$\n  ]$\n}'
+    FileWrite $0 '{$\n  "name": "com.caltopo.gpsio",$\n  "description": "GPS IO",$\n  "path": "$INSTDIR_DOUBLE_SLASH\\gpsio-host.bat",$\n  "type": "stdio",$\n  "allowed_extensions": [$\n    "${FIREFOX_EXTENSION_ID}"$\n  ]$\n}'
     FileClose $0
 
     ; edit registry, to register the Chrome and Firefox native host manifest locations

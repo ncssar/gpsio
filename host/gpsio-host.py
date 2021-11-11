@@ -81,10 +81,13 @@ if not os.path.isfile(gpsbabel_exe):
 
 if sys.platform == "win32":
     import msvcrt
-    sys.stdout=os.fdopen(sys.stdout.fileno(), 'w+b')
-    sys.stdin=os.fdopen(sys.stdin.fileno(), 'rb', 0)
-    msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
-    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    try:
+        sys.stdout=os.fdopen(sys.stdout.fileno(), 'w+b')
+        sys.stdin=os.fdopen(sys.stdin.fileno(), 'rb', 0)
+        msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    except Exception as e:
+        sys.exit("ABORT: "+str(e)+"\nMaybe this script is being run from the command line with no arguments?  If so, this abort is expected.  Use it from the web browser extension.")
 
 
 # Helper function that sends a message to the webapp.
