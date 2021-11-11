@@ -1,8 +1,32 @@
 # GPSIO Extension
 
-(This is the text from gpsio.caltopo.com - GPSIO has since been transfered to github in the NCSSAR organizational account.)
+GPSIO is a web browser extension (and supporting toolset) that aids the transfer of GPS data between CalTopo/SARTopo and Garmin GPS devices.
 
-GPSIO is a still-experimental replacement for the Garmin Communicator plugin, built on open web standards and using GPSBabel to read GPS data. Supported browsers are Chrome and Firefox. Supported OSs are Mac, Windows and (soon) Linux.
+GPSIO is a replacement for the Garmin Communicator plugin, built on open web standards.  It was created around the time that web browsers stopped supporting NPAPI Plugins such as Garmin Communicator (2016-2017), with a transfer of ownership in 2020/2021 and a new browser extension with a different extension ID starting in November 2021.
+
+Supported browsers are Chrome and Firefox. Supported OSs are Mac, Windows and (soon) Linux, though currently there is only a Windows installer.  Installation on Mac will be more manual - see 'Installing the GPSIO Extension' below.
+
+## Using GPSIO
+The only part of GPSIO that the user normally sees is the transfer method selection after clicking Export or Import in CalTopo / SARTopo / CalTopo-Desktop.  The user can also click the extension icon, at the top right of the web browser, to show and modify the GPSIO data filter settings.  See below for more details.
+
+## GPSIO Architecture
+GPSIO requires multiple parts to all be working together.  See the installation details below.
+1. Extension - The GPSIO browser extension allows the web page to commuicate with the host. 
+2. Host - The extension uses 'Native Messaging' to talk with the 'host' program, which runs on the same computer as the web browser.  You can read about Native Messaging online.  The host program is written in Python, but is compiled to an executable file so that a complete Python installation is no longer needed.
+3. GPSBabel - The host, in turn, may call GPSBabel to talk with the GPS device, and to organize imported data.
+4. Garmin USB Drivers - For older devices, the Garmin USB Drivers are necessary to allow the GPS device to work with the computer.
+
+## Garmin GPS Types
+1. GMSM - Most of the modern Garmin handlheld GPS devices use Garmin Mass Storage Mode (GMSM) to transfer data: the device will automatically show up as another drive a few seconds after you plug it in - as if you plugged in a thumb drive.  For these devices, GPSIO is just a wrapper around the normal file selection and transfer actions, though GPSIO does provide the additional filters that you see in the options popup, and it will automatically import multiple files as appropriate.  So, GPSIO can potentially provide a more streamlined, consistent, and trainable import and export experience, saving a couple of clicks each time, and avoiding the need to sort through files during import.  In the hands of an experienced savvy operator, this may not be of much benefit.
+
+2. MTP - Some newer Garmin devices (Alpha 200i) use Media Transfer Protocol (MTP).  This is the same protocol used by most smartphones to transfer files, especially images and music.  Windows will mount your MTP device as another drive, just as above, but MTP is not yet supported in GPSIO.  So, you will have to export to file and import from file.  Adding MTP support to GPSIO is high on the priority list but there is no expected ETA.  Take a look [here](https://github.com/ncssar/gpsio/issues/12) and please contribute if you can.  (Also check [here](https://github.com/ncssar/gpsio/issues/10#issuecomment-817205961) regarding the Alpha 200i MTP vs GMSM.)
+
+3. USB - This is a bit of a misnomer since you are plugging in to a USB port in all cases, but, this refers to the older Garmin USB Serial Protocol.  This is only used for very old Garmin devices such as the GPSMap 60 series.  These devices do not mount as a drive, so you need a tool like GPSIO or Garmin Communicator or GPSBabel to trade data with these devices.  In this case, GPSIO is actually a wrapper around a call to GPSBabel, which is automatically installed by the GPSIO installer.
+
+
+# INSTALLATION - UNDER CONSTRUCTION
+A Windows installer (using Nullsoft Scriptable Install System) will be ready in the next few days.  Until then, read on but consider that the rest of this file is currently being revamped to reflect the new extension and new installation process.
+
 
 ## Installing the GPSIO Extension
 For the time being, GPSIO installation is a multi-step process that requires a bit of computer savvy. Hopefully, at some point in the future, this will all get boiled down to a single-click install.
@@ -16,10 +40,7 @@ For the time being, GPSIO installation is a multi-step process that requires a b
 1. Install the host. [Download.](http://gpsio.caltopo.com/gpsio-installer.zip) On windows systems you must unzip this file by right-clicking on it and choosing "Extract All"; the installer will not work properly if you navigate into the zipped folder by double-clicking on it in the windows file explorer. Either double-click on the install.py script or open up a command prompt and run "python installer.py".
 2. Install the extension in your browser.
 - Chrome:
-    - Click either of the following links to install the extension
-        - [Works on all websites](https://chrome.google.com/webstore/detail/gpsio/afgcejeehpnhafgikkimogllebbgegck)
-        - [Restricted to CalTopo/SARTopo](https://chrome.google.com/webstore/detail/gpsio/hoecjlpnaeogdncffnambjemmfcajmcc)
-    - Click "Add to Chrome"
+    - Click [here](https://chrome.google.com/webstore/detail/gpsio/cbpembjdolhcjepjgdkcflipfojbjall) to see the extension on the Chrome Web Store, then click 'Add to Chrome'
 - Firefox:
     - Click [here](http://gpsio.caltopo.com/gpsio.xpi) to install the extension
     - Click "Allow"
