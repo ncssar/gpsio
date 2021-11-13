@@ -9,6 +9,28 @@ Supported browsers are Chrome, Firefox, and Edge. Supported OSs are Mac, Windows
 ## Using GPSIO
 The only part of GPSIO that the user normally sees is the transfer method selection after clicking Export or Import in CalTopo / SARTopo / CalTopo-Desktop.  The user can also click the extension icon, at the top right of the web browser, to show and modify the GPSIO data filter settings.  See below for more details.
 
+
+# INSTALLATION - UNDER CONSTRUCTION
+A Windows installer (using Nullsoft Scriptable Install System) will be ready in the next few days.  Until then, read on but consider that the rest of this file is currently being revamped to reflect the new extension and new installation process.
+
+## 1. Install the GPSIO web browser extension
+The GPSIO browser extension is published on Chrome Web Store, AMO (addons.mozilla.org), and the Edge Add-ons web page.  Install the extenions for whichever browser(s) you use.
+
+## 2. Install the prerequisites
+###   a. Python
+Python comes pre-installed on Mac and Linux installations, but may need to be installed for Windows. Click [here](https://www.python.org/downloads/) to download the latest Python for Windows. During installation, make sure to enable the option to "Add Python to PATH" so that other programs can make use of it. If the extension fails to transfer data and you think you may have forgotten the enable the option, you can run the install program again, and modify your existing Python installation, to enable that option.
+###   b. GPSBabel
+GPSBabel is a free open-source program for working with GPSs and GPS data (consider making a donation). Click [here](http://www.gpsbabel.org/download.html) to download.  The native host makes calls to GPSBabel.
+###   c. For Windows: Garmin USB drivers
+The latest Garmin USB drivers are available [here](https://www8.garmin.com/support/download_details.jsp?id=591). For USB-mode devices (Garmin 60 or similar non-mass-storage-mode devices), you can run Windows Device Manager to verify the driver installation: if the drivers are installed properly, a plugged-in Garmin USB-mode device will show up in a category named "Garmin Devices"; if the drivers are not installed, a plugged-in Garmin USB-mode device will show up as "Unknown USB Device", causing CalTopo GPSIO transfers to abort with a red line of text indicating that no GPS was found. (Mass-storage-mode devices such as Garmin 62, 64, etc. will instead show up under 'Drives' and/or 'Portable Devices'.)
+
+## 3. Install the native host
+### UNDER CONSTRUCTION
+In Windows, the host itself is a batch file that invokes a python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the 'host' directory above.
+You will also need to tell the browser extension where the actual native host files are located on your computer.  The installers will take care of this for you.  The methods for doing this are documented in the various browser development documents, and are different for Windows vs. Mac.  While the installers are under construction, please contact the developer if you need help setting this up.
+
+
+# Details
 ## GPSIO Architecture
 GPSIO requires multiple parts to all be working together.  See the installation details below.
 1. Extension - The GPSIO browser extension allows the web page to commuicate with the host. 
@@ -16,46 +38,27 @@ GPSIO requires multiple parts to all be working together.  See the installation 
 3. GPSBabel - The host, in turn, may call GPSBabel to talk with the GPS device, and to organize imported data.
 4. Garmin USB Drivers - For older devices, the Garmin USB Drivers are necessary to allow the GPS device to work with the computer.
 
-## Garmin GPS Types
-1. GMSM - Most of the modern Garmin handlheld GPS devices use Garmin Mass Storage Mode (GMSM) to transfer data: the device will automatically show up as another drive a few seconds after you plug it in - as if you plugged in a thumb drive.  For these devices, GPSIO is just a wrapper around the normal file selection and transfer actions, though GPSIO does provide the additional filters that you see in the options popup, and it will automatically import multiple files as appropriate.  So, GPSIO can potentially provide a more streamlined, consistent, and trainable import and export experience, saving a couple of clicks each time, and avoiding the need to sort through files during import.  In the hands of an experienced savvy operator, this may not be of much benefit.
+## Garmin GPS Data Transfer Methods
+1. GMSM - Most of the modern Garmin handlheld GPS devices use Garmin Mass Storage Mode (GMSM) to transfer data: the device will automatically show up as another drive (actually, two drives if the device has a memory card) a few seconds after you plug it in - as if you plugged in a thumb drive.  For these devices, GPSIO is just a wrapper around the normal file selection and transfer actions, though GPSIO does provide the additional filters that you see in the options popup, and it will automatically import multiple files as appropriate.  So, GPSIO can potentially provide a more streamlined, consistent, and trainable import and export experience, saving a couple of clicks each time, and avoiding the need to navigate to or sort through files during import.  In the hands of an experienced savvy operator, this may not be of much benefit.
 
-2. MTP - Some newer Garmin devices (Alpha 200i) use Media Transfer Protocol (MTP).  This is the same protocol used by most smartphones to transfer files, especially images and music.  Windows will mount your MTP device as another drive, just as above, but MTP is not yet supported in GPSIO.  So, you will have to export to file and import from file.  Adding MTP support to GPSIO is high on the priority list but there is no expected ETA.  Take a look [here](https://github.com/ncssar/gpsio/issues/12) and please contribute if you can.  (Also check [here](https://github.com/ncssar/gpsio/issues/10#issuecomment-817205961) regarding the Alpha 200i MTP vs GMSM.)
+2. USB - This is a bit of a misnomer since you are probably plugging in to a USB port in all cases, but, this refers to the older Garmin USB Serial Protocol.  This is only used for very old Garmin devices such as the GPSMap 60 series.  These devices do not mount as a drive, so you need a tool like GPSIO or Garmin Communicator or GPSBabel to trade data with these devices.  In this case, GPSIO is actually a wrapper around a call to GPSBabel, which is automatically installed by the GPSIO installer.
 
-3. USB - This is a bit of a misnomer since you are plugging in to a USB port in all cases, but, this refers to the older Garmin USB Serial Protocol.  This is only used for very old Garmin devices such as the GPSMap 60 series.  These devices do not mount as a drive, so you need a tool like GPSIO or Garmin Communicator or GPSBabel to trade data with these devices.  In this case, GPSIO is actually a wrapper around a call to GPSBabel, which is automatically installed by the GPSIO installer.
+3. MTP - Some newer Garmin devices (Alpha 200i) use Media Transfer Protocol (MTP).  This is the same protocol used by most smartphones to transfer files, especially images and music.  Windows will mount your MTP device as another drive, just as above, but MTP is not yet supported in GPSIO.  So, you will have to export to file and import from file.  Adding MTP support to GPSIO is high on the priority list but there is no expected ETA.  Take a look [here](https://github.com/ncssar/gpsio/issues/12) and please contribute if you can.  (Also check [here](https://github.com/ncssar/gpsio/issues/10#issuecomment-817205961) regarding the Alpha 200i MTP vs GMSM.)
 
+# Usage
+Importing to and Exporting from CalTopo/SARTopo using GPSIO is basically the same as Importing and Exporting with any file type.  Just make sure to select GPSIO, rather than a file type, after selecting Import or Export.
 
-# INSTALLATION - UNDER CONSTRUCTION
-A Windows installer (using Nullsoft Scriptable Install System) will be ready in the next few days.  Until then, read on but consider that the rest of this file is currently being revamped to reflect the new extension and new installation process.
-
-
-## Installing the GPSIO Extension
-For the time being, GPSIO installation is a multi-step process that requires a bit of computer savvy. Hopefully, at some point in the future, this will all get boiled down to a single-click install.
-
-### Install the prerequisites if not already installed on your computer:
-1. Python, which comes pre-installed on Mac and Linux installations, but may need to be installed for Windows. Click [here](https://www.python.org/downloads/) to download the latest Python for windows. During installation, make sure to enable the option to "Add Python to environment variables" (or similar wording) so that other programs can make use of it. If needed, you can run the install program again, and modify your existing Python installation, to enable that option.
-2. GPSBabel, an open source program for working with GPSs and GPS data (consider making a donation). Click [here](http://www.gpsbabel.org/download.html) to download.
-3. For Windows: the latest Garmin USB drivers, available [here](https://www8.garmin.com/support/download_details.jsp?id=591). For USB-mode devices (Garmin 60 or similar non-mass-storage-mode devices), you can run Windows Device Manager to verify the driver installation: if the drivers are installed properly, a plugged-in Garmin USB-mode device will show up in a category named "Garmin Devices"; if the drivers are not installed, a plugged-in Garmin USB-mode device will show up as "Unknown USB Device", causing CalTopo GPSIO transfers to abort with a red line of text indicating that no GPS was found. (Mass-storage-mode devices such as Garmin 62, 64, etc. will instead show up under 'Drives' and/or 'Portable Devices'.)
-
-## To comply with browser security restrictions, GPSIO is composed of two parts: an extension and a host. You need to install both parts.
-1. Install the host. [Download.](http://gpsio.caltopo.com/gpsio-installer.zip) On windows systems you must unzip this file by right-clicking on it and choosing "Extract All"; the installer will not work properly if you navigate into the zipped folder by double-clicking on it in the windows file explorer. Either double-click on the install.py script or open up a command prompt and run "python installer.py".
-2. Install the extension in your browser.
-- Chrome:
-    - Click [here](https://chrome.google.com/webstore/detail/gpsio/cbpembjdolhcjepjgdkcflipfojbjall) to see the extension on the Chrome Web Store, then click 'Add to Chrome'
-- Firefox:
-    - Click [here](http://gpsio.caltopo.com/gpsio.xpi) to install the extension
-    - Click "Allow"
-
-
-# Importing GPS Tracks and Waypoints as Lines and Markers using GPSIO
+## Importing GPS Tracks and Waypoints as Lines and Markers using GPSIO
 1. Connect the GPS to the computer with a USB cable. It may take the GPS a minute or two to save the tracks and establish a connection.
+  - wait for the computer to indicate that it recognizes the device; if you proceed to the next step too soon, you will get a red error, in which case you can just try again after the device is recognized.
 2. On the CalTopo top menu bar, click "Import" and "Connect via GPSIO".
 3. A message will appear while the GPS is being read.
 4. If the connection is unsuccessful, you may see an error message. The extension may not be correctly installed, or you may have not given the GPS long enough to connect.
 5. A second message will appear once the data has been read and is being processed.
 6. Un-check any waypoints or tracks you do not want to import and click "Import".
-6. Track will appear in the "Lines & Polygons" folder, waypoints will appear in the "Markers" folder.
+7. Track will appear in the "Lines & Polygons" folder, waypoints will appear in the "Markers" folder.
 
-# Exporting Lines, Polygons and Markers to GPS Units using GPSIO
+## Exporting Lines, Polygons and Markers to GPS Units using GPSIO
 1. Connect the GPS to the computer with a USB cable. It may take the GPS a minute or two to save the tracks and establish a connection.
 2. On the CalTopo top menu bar, click "Export" and "Connect via GPSIO".
 3. Un-check any objects you do not want to import and click "Export".
@@ -64,15 +67,17 @@ For the time being, GPSIO installation is a multi-step process that requires a b
 
 
 ## Contributing
-GPSIO is free software (GPL) and is hosted at https://github.com/ncssar/gpsio. Contributions are welcome; two high priority items are Linux installation support and integration with non-Garmin GPSs (either through auto-detection or a user-selectable GPS type dropdown). Testing with additional GPS units is also valuable; send bug reports to info@caltopo.com.
+GPSIO is free software (GPL) and is hosted at https://github.com/ncssar/gpsio. Contributions are welcome; two high priority items are Linux installation support and integration with non-Garmin GPSs (either through auto-detection or a user-selectable GPS type dropdown). Testing with additional GPS units is also valuable; send bug reports to the developer.
 
-## Troubleshooting / debugging - IN PROGRESS
+## Troubleshooting / debugging
 You tried to install GPSIO but it's not working... what now?  Troubleshooting GPSIO is tricky because it has multiple parts.  Here are some troubleshooting guidelines:
-1. Do you see the GPSIO extension icon (currently, an odd squished blue-and-gray thing that is supposed to look like an old GPS) at the top right of your browser window, alongside any other extension icons?
+1. Do you see the GPSIO extension icon (a very small globe with two red arrows) at the top right of your browser window, alongside any other extension icons?
     - YES: go to the next step
-    - NO: the browser extension (Chrome or Firefox) hasn't been installed; see the installation steps above.  If that doesn't solve it, contact the developer with these details.
+    - NO: the browser extension hasn't been installed; see the installation steps above.  If that doesn't solve it, contact the developer with these details.
 2. Left-click the GPSIO extension icon.  A small popup box should appear near the extension icon.  Does it have a red line of text that says 'Cannot communicate with host', or, a green line of text that says 'Plugin working properly' with a selection of filter options?
     - RED: left-click 'check again' once or twice.  If the red line doesn't go away, go to the next step.
     - GREEN: contact the developer with exact details of the error you're seeing.
-3. Open a command terminal, go to the default gpsio installation directory (normally, the 'gpsio' directory under your user home directory), and run wrapper.py using python.  Any error messages in the first part of wrapper.py will show up here, but most of the code relies on being run through the browser so won't be tested by running it from the command line.
-4. If you see 'Reading data from GPS . . .' folled by a bold red line 'GPS Exception: Unexpected disconnect' when you try to import using GPSIO, check the GPSIO log file (normally gpsio_log.txt in your home directory).  This indicates that wrapper.py encountered an error, which will hopefully show up in the log file.
+3. Open a command terminal, go to the default gpsio installation directory (normally, the 'gpsio' directory under your user home directory), and run gpsio-host.py using python.  Any error messages in the first part of gpsio-host.py will show up here, but most of the code relies on being run through the browser so won't be tested by running it from the command line.
+4. If you see 'Reading data from GPS . . .' followed by a bold red line 'GPS Exception: Unexpected disconnect' when you try to import using GPSIO, check the GPSIO log file (normally gpsio-host_log.txt in your home directory).  This indicates that gpsio-host.py encountered an error, which will hopefully show up in the log file.
+
+Always feel free to contact the developer if you have any questions.
