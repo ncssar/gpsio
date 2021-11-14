@@ -1,8 +1,8 @@
 ; GPSIO installer
 ; github.com/ncssar/gpsio
 
-; TODO: install firefox extension
-; TODO: install edge extension
+; TODO: decide on best way to deal with Chrome/Edge extension-registry-trigger key added but extension not installed
+;          (probably blocklisted or offline)
 ; TODO: general cleanup and UI/UX work
 ; TODO: test, get feedback
 
@@ -16,12 +16,13 @@ InstallDir "$PROGRAMFILES32\GPSIO"
 !include StrRep.nsh
 !include ReplaceInFile.nsh
 
-!define CHROME_EXTENSION_ID "cbpembjdolhcjepjgdkcflipfojbjall"
+!define CHROME_EXTENSION_ID "cbpembjdolhcjepjgdkcflipfojbjall" ; published on Chrome Web Store
 !define CHROME_EXTENSIONS_FOLDER "$LOCALAPPDATA\Google\Chrome\User Data\Default\Extensions"
 !define CHROME_REGISTRY_BASE_KEY "SOFTWARE\WOW6432Node\Google\Chrome\Extensions"
 !define CHROME_REGISTRY_FULL_KEY "${CHROME_REGISTRY_BASE_KEY}\${CHROME_EXTENSION_ID}"
-!define FIREFOX_EXTENSION_ID "{5da30c55-01fd-4045-a0d2-41c47ebc8b83}"
+!define FIREFOX_EXTENSION_ID "{5da30c55-01fd-4045-a0d2-41c47ebc8b83}" ; published on AMO (addons.mozilla.org)
 !define FIREFOX_PROFILES_FOLDER "$APPDATA\Mozilla\Firefox\Profiles"
+!define EDGE_EXTENSION_ID "gnonahdiojppiacfbalpgjddpkfepihk" ; published on Edge Add-ons
 !define UNINSTALL_ROOT "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
 !define UNINSTALL_WOW_ROOT "SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
 
@@ -81,13 +82,18 @@ Section "Chrome Extension"
         ClearErrors
         EnumRegKey $0 HKLM "${CHROME_REGISTRY_FULL_KEY}" "update_url"
         IfErrors 0 keyexists2
-            MessageBox MB_OK "Registry key does not exist - click OK to add it..."
+            MessageBox MB_OK "Registry key to trigger Chrome extension installation does not exist - click OK to add it..."
             WriteRegStr HKLM "${CHROME_REGISTRY_FULL_KEY}" "update_url" "https://clients2.google.com/service/update2/crx"
             MessageBox MB_OK "Registry key added.  Chrome may prompt you to enable the extension."
             Goto chrome_extension_done
         keyexists2:
-            MessageBox MB_OK "Registry key already exists, but it does not appear that the extension is installed for this user.  You will need to install the Chrome GPSIO extension by hand from the Chrome Web Store."
-    ;        DeleteRegKey HKLM "${CHROME_REGISTRY_FULL_KEY}" - not sure if there is a real need to delete the key
+            MessageBox MB_OK "Registry key to trigger Edge extension installation already exists, but it does not appear that the extension is installed for this user.  You will need to install the Chrome GPSIO extension by hand from the Chrome Web Store."
+            ; ; delete then re-add the key to try again
+            ; DeleteRegKey HKLM "${CHROME_REGISTRY_FULL_KEY}" ; not sure if there is a real need to delete the key
+            ; WriteRegStr HKLM "${CHROME_REGISTRY_FULL_KEY}" "update_url" "https://clients2.google.com/service/update2/crx"
+            ; ; if still no-go, it is probably in the blocklist; user will need to add then remove it by hand to clear from the blocklist;
+            ; ;   may as well just give them the url; or, maybe the computer is currently offline, so leaving the registry key
+            ; ;   in place is a good thing, so the next time the computer goes online it will automaticaly add the extension
     chrome_extension_done:
 SectionEnd
 
@@ -105,6 +111,28 @@ Section "Firefox Extension"
         MessageBox MB_OK "Firefox extension file copied to user's default profile extensions folder.$\n$\nThe next time you start (or restart) Firefox, you should see a notice - probably a warning triangle in the top-right three-line-menu - that gpsio has been installed.  Make sure to enable it when prompted.$\n$\nThe extension uses these permissions:$\n - Access your data for all websites$\n - Exchange messages with programs other than Firefox"
     firefox_extension_done:
 SectionEnd
+
+; Edge extension installation can be triggered from the registry, same method as Chrome except for the update_url value:
+; https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/developer-guide/alternate-distribution-options
+; Section "Edge Extension"
+;     ; is the extension already installed?
+;     IfFileExists "${EDGE_EXTENSIONS_FOLDER}\${EDGE_EXTENSION_ID}" 0 nofile3
+;         MessageBox MB_OK "It appears the Edge extension is already installed for this user."
+;         Goto edge_extension_done
+;     nofile3:
+;         ; test for existence of attempted install-via-registry; see https://nsis-dev.github.io/NSIS-Forums/html/t-288318.html
+;         ClearErrors
+;         EnumRegKey $0 HKLM "${EDGE_REGISTRY_FULL_KEY}" "update_url"
+;         IfErrors 0 keyexists3
+;             MessageBox MB_OK "Registry key to trigger Edge extension installation does not exist - click OK to add it..."
+;             WriteRegStr HKLM "${EDGE_REGISTRY_FULL_KEY}" "update_url" "https://edge.microsoft.com/extensionwebstorebase/v1/crx"
+;             MessageBox MB_OK "Registry key added.  Edge may prompt you to enable the extension."
+;             Goto edge_extension_done
+;         keyexists3:
+;             MessageBox MB_OK "Registry key to trigger Edge extension installation already exists, but it does not appear that the extension is installed for this user.  You will need to install the Edge GPSIO extension by hand from the Edge Add-ons website."
+;             DeleteRegKey HKLM "${EDGE_REGISTRY_FULL_KEY}" ; not sure if there is a real need to delete the key
+;     chrome_extension_done:
+; SectionEnd
 
 Section "GPSBabel"
     ; is it already installed? test for registry entry
@@ -160,10 +188,11 @@ Section "Native Host"
     File "..\host\gpsio-host.py"
     File "README.txt" ; not the same as README.md which is for the GitHub repo page
 
-    ; generate chrome-manifest.json and firefox-manifest.json
+    ; generate <browser>-manifest.json files
     ; Common errors in the manifest:
     ;  1 - \ is an escape character in json; use \\ instead
-    ;  2 - must have a trailing slash / at the end of the extension ID
+    ;  2 - Chrome and Edge: must have a trailing slash / at the end of the extension ID in allowed_origins
+    ;         (failure to add the trailing slash will cause the browser to not find the host)
     FileOpen $0 $INSTDIR\chrome-manifest.json w
     FileWrite $0 '{$\n  "name": "com.caltopo.gpsio",$\n  "description": "GPS IO",$\n  "path": "$instdir_double_slash\\gpsio-host.bat",$\n  "type": "stdio",$\n  "allowed_origins": [$\n    "chrome-extension://${CHROME_EXTENSION_ID}/"$\n  ]$\n}'
     FileClose $0
@@ -172,9 +201,14 @@ Section "Native Host"
     FileWrite $0 '{$\n  "name": "com.caltopo.gpsio",$\n  "description": "GPS IO",$\n  "path": "$instdir_double_slash\\gpsio-host.bat",$\n  "type": "stdio",$\n  "allowed_extensions": [$\n    "${FIREFOX_EXTENSION_ID}"$\n  ]$\n}'
     FileClose $0
 
+    FileOpen $0 $INSTDIR\edge-manifest.json w
+    FileWrite $0 '{$\n  "name": "com.caltopo.gpsio",$\n  "description": "GPS IO",$\n  "path": "$instdir_double_slash\\gpsio-host.bat",$\n  "type": "stdio",$\n  "allowed_origins": [$\n    "chrome-extension://${EDGE_EXTENSION_ID}/"$\n  ]$\n}'
+    FileClose $0
+
     ; edit registry, to register the Chrome and Firefox native host manifest locations
     WriteRegStr HKCU "Software\Google\Chrome\NativeMessagingHosts\com.caltopo.gpsio" "" "$INSTDIR\chrome-manifest.json"
     WriteRegStr HKCU "Software\Mozilla\NativeMessagingHosts\com.caltopo.gpsio" "" "$INSTDIR\firefox-manifest.json"
+    WriteRegStr HKCU "Software\Microsoft\Edge\NativeMessagingHosts\com.caltopo.gpsio" "" "$INSTDIR\edge-manifest.json"
 
     ; edit gpsio-host.ini with confirmed gpsbabel executable path
     !insertMacro _ReplaceInFile "$INSTDIR\gpsio-host.ini" "UNDEFINED" "$gpsbabel_exe_path"
@@ -182,6 +216,7 @@ Section "Native Host"
 SectionEnd
 
 Section "Complete"
+    ; DeleteRegKey HKLM "${CHROME_REGISTRY_FULL_KEY}" ; not sure if there is a real need to delete the key
     RMDir /r "$INSTDIR\tmp"
     MessageBox MB_OK "Installation complete!"
 SectionEnd

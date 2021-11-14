@@ -1,6 +1,6 @@
 var rt = null
 if(typeof browser != "undefined") rt = browser.runtime;
-if(typeof chrome != "undefined") rt = chrome.runtime;
+if(typeof chrome != "undefined") rt = chrome.runtime; // also works for Edge
 
 var fn = function(request, sender, sendResponse) {
 	var port = rt.connectNative("com.caltopo.gpsio");
