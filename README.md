@@ -1,3 +1,5 @@
+<img align='right' src='extension/common/gpsio_icon_128.png'>
+
 # GPSIO Extension
 
 GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages (primarily CalTopo and SARTopo) and Garmin GPS devices.
