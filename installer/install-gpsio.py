@@ -268,7 +268,7 @@ def stage_3():
         print('3. Garmin USB Drivers --> installing...')
         d=os.path.join(INSTALL_TMP,'USBDrivers_2312.exe')
         if os.path.isfile(d):
-            # subprocess.run([d])
+            subprocess.run([d])
             print('3. Garmin USB Drivers --> installation complete.')
         else:
             print('3. Garmin USB Drivers --> installation failed; installer not available.')
