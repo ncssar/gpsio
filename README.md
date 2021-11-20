@@ -14,7 +14,10 @@ The only part of GPSIO that the user normally sees is the transfer method select
 A Windows installer (using Nullsoft Scriptable Install System) will be ready in the next few days.  Until then, read on but consider that the rest of this file is currently being revamped to reflect the new extension and new installation process.
 
 ## 1. Install the GPSIO web browser extension
-The GPSIO browser extension is published on Chrome Web Store, AMO (addons.mozilla.org), and the Edge Add-ons web page.  Install the extenions for whichever browser(s) you use.
+The GPSIO browser extension is published for Chrome, Firefox, and Edge.  This is a new extension as of Novermber 2021; the new extension has a different icon than previous versions.  The extension from before November 2021 will not work with the host from November 2021.
+- Chrome: [gpsio at the Chrome Web Store](https://chrome.google.com/webstore/detail/gpsio/cbpembjdolhcjepjgdkcflipfojbjall)
+- Firefox: [gpsio at AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/gpsio-extension/)
+- Edge: [gpsio at Edge AddOns](https://microsoftedge.microsoft.com/addons/detail/gpsio/gnonahdiojppiacfbalpgjddpkfepihk)
 
 ## 2. Install the prerequisites
 ###   a. Python
