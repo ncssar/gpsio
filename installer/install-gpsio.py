@@ -1,4 +1,4 @@
-# TODO: verify gpsbabel after installing
+
 # TODO: native host install logic: if/when/how to overwrite host dir file(s) on new install
 # TODO: UI - simplify responses to 'OK' or 'FAIL'?
 # TODO: UI - write summary to file, to be popped up by NSIS
@@ -225,7 +225,6 @@ def stage_1c():
             winreg.CloseKey(key)
 
 # 2. attempt to install GPSBabel
-#  Windows: check the registry 
 def stage_2():
     if win32:
         subkeyName=findRegKeyWithEntry(UNINSTALL_WOW_ROOT,'DisplayName','GPSBabel 1.7.0')
@@ -240,12 +239,25 @@ def stage_2():
                 print('2. GPSBabel --> previous installation verified.')
             else:
                 print('2. GPSBabel --> previous installation appears corrupt; see closing notes.')
-            return
         else:
             print('2. GPSBabel --> installing...')
             subprocess.run([os.path.join(INSTALL_TMP,'GPSBabel-1.7.0-Setup.exe')])
             print('2. GPSBabel --> installer completed; verifying...')
-
+            # check again: duplicated / repeated code from above - not a big problem
+            subkeyName=findRegKeyWithEntry(UNINSTALL_WOW_ROOT,'DisplayName','GPSBabel 1.7.0')
+            if subkeyName: # key found: read the install path value and make sure gpsbabel.exe is there
+                # print('matching key: '+str(subkeyName))
+                keyName=UNINSTALL_WOW_ROOT+'\\'+subkeyName
+                # print('full key name: '+keyName)
+                key=winreg.OpenKey(HKLM,keyName)
+                loc=winreg.QueryValueEx(key,'InstallLocation')[0]
+                gpsbabel_exe=os.path.join(loc,'gpsbabel.exe')
+                if os.path.isfile(gpsbabel_exe):
+                    print('2. GPSBabel --> installation verified.')
+                else:
+                    print('2. GPSBabel --> installation appears corrupt; see closing notes.')
+            else:
+                print('2. GPSBabel --> installation appears corrupt; see closing notes.')
 
 # 3. attempt to install Garmin USB drivers (Windows only)
 def stage_3():
