@@ -39,7 +39,7 @@ You will also need to tell the browser extension where the actual native host fi
 ## GPSIO Architecture
 GPSIO requires multiple parts to all be working together.  See the installation details below.
 1. Extension - The GPSIO browser extension allows the web page to commuicate with the host. 
-2. Host - The extension uses 'Native Messaging' to talk with the 'host' program, which runs on the same computer as the web browser.  You can read about Native Messaging online.  The host program is written in Python, but is compiled to an executable file so that a complete Python installation is no longer needed.
+2. Host - Browser extensions are not capable of talking to hardware devices.  The host is a separate program, running on the same computer as the web browser, that talks with GPS devices.  The extension uses 'Native Messaging' to talk with the host.  You can read about Native Messaging online.  The host is written in Python, but no separate Python installation is needed, since the official 'embeddable' Python package is a part of the GPSIO installation.
 3. GPSBabel - The host, in turn, may call GPSBabel to talk with the GPS device, and to organize imported data.
 4. Garmin USB Drivers - For older devices, the Garmin USB Drivers are necessary to allow the GPS device to work with the computer.
 
