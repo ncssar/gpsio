@@ -3,9 +3,11 @@
 # TODO: UI - simplify responses to 'OK' or 'FAIL'?
 # TODO: UI - write summary to file, to be popped up by NSIS
 # TODO: check for issues due to the fact that this script is run as admin
-# TODO: oschmod, pywin32 are only needed by the install script - don't put them in the host dist dir
-#          - but what code should do this?  python can't delete files that it's using,
-#            and NSIS doesn't know where the host directory is
+
+# TODO: Mac
+# TODO: Linux
+
+# TODO: investigate sending gpsio-host.py updates via new extension versions
 
 
 
@@ -68,6 +70,7 @@ CHROME_EXTENSION_ID='cbpembjdolhcjepjgdkcflipfojbjall' # published on Chrome Web
 FIREFOX_EXTENSION_ID='{5da30c55-01fd-4045-a0d2-41c47ebc8b83}' # published on AMO (addons.mozilla.org)
 EDGE_EXTENSION_ID='gnonahdiojppiacfbalpgjddpkfepihk' # published on Edge Add-ons
 CHROME_UPDATE_URL='https://clients2.google.com/service/update2/crx'
+EDGE_UPDATE_URL='https://edge.microsoft.com/extensionwebstorebase/v1/crx'
 EXTENSION_HANDLE='com.caltopo.gpsio'
 
 # platform dependent constants
@@ -78,9 +81,13 @@ if win32:
     HOST_DIR=PF86+'\\GPSIO'
     CHROME_EXTENSIONS_FOLDER=os.getenv('LOCALAPPDATA')+'\\Google\\Chrome\\User Data\\Default\\Extensions'
     FIREFOX_PROFILES_FOLDER=os.getenv('APPDATA')+'\\Mozilla\\Firefox\\Profiles'
+    EDGE_EXTENSIONS_FOLDER=os.getenv('LOCALAPPDATA')+'\\Microsoft\\Edge\\User Data\\Default\\Extensions'
+
     # registry entry constants
     CHROME_REGISTRY_BASE_KEY='SOFTWARE\\WOW6432Node\\Google\\Chrome\\Extensions'
-    CHROME_REGISTRY_FULL_KEY=CHROME_REGISTRY_BASE_KEY+"\\"+CHROME_EXTENSION_ID
+    CHROME_REGISTRY_FULL_KEY=CHROME_REGISTRY_BASE_KEY+'\\'+CHROME_EXTENSION_ID
+    EDGE_REGISTRY_BASE_KEY='SOFTWARE\\WOW6432Node\\Microsoft\\Edge\\Extensions'
+    EDGE_REGISTRY_FULL_KEY=EDGE_REGISTRY_BASE_KEY+'\\'+EDGE_EXTENSION_ID
     UNINSTALL_ROOT='SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
     UNINSTALL_WOW_ROOT='SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall'
     CHROME_NMH_KEY='Software\\Google\\Chrome\\NativeMessagingHosts\\'+EXTENSION_HANDLE
@@ -92,7 +99,7 @@ elif linux:
     pass
 else:
     print('unknown platform '+str(sys.platform))
-    exit(1)
+    sys.exit(1)
 
 
 def findRegKeyWithEntry(keyName,entryName,entryValue):
@@ -133,25 +140,28 @@ def stage_1a():
     #  is the extension already installed?
     if os.path.isdir(os.path.join(CHROME_EXTENSIONS_FOLDER,CHROME_EXTENSION_ID)):
         print('  1a. Chrome Extension --> already installed.')
-        exit(0)
+        return
     else:
         if win32: # add registry entry if needed
+            flags=winreg.KEY_ALL_ACCESS
+            if 'WOW64' in CHROME_REGISTRY_BASE_KEY:
+                flags=winreg.KEY_ALL_ACCESS|winreg.KEY_WOW64_64KEY
             try:
-                key=winreg.CreateKeyEx(HKLM,CHROME_REGISTRY_FULL_KEY,access=winreg.KEY_ALL_ACCESS)
+                key=winreg.CreateKeyEx(HKLM,CHROME_REGISTRY_FULL_KEY,access=flags)
             except PermissionError:
-                print('Permission error: key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
+                print('Permission error: Chrome key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
                 return
             needToWrite=False
             try:
                 val=winreg.QueryValueEx(key,'update_url')
             except PermissionError:
-                print('Permission error: key value cannot be queried')
+                print('Permission error: Chrome key value cannot be queried')
                 return
-            except:
+            except: # value does not exist
                 needToWrite=True
             else:
-                if val[0]==CHROME_UPDATE_URL:
-                    print('  1a. Chrome Extenion --> installation failed; see closing notes.')
+                if val[0]==CHROME_UPDATE_URL: # key exists but extension was not installed; maybe on blocklist
+                    print('  1a. Chrome Extension --> installation failed; see closing notes.')
                     return
                 else:
                     needToWrite=True
@@ -178,7 +188,41 @@ def stage_1b():
 
 # 1c. attempt to install Edge extension
 def stage_1c():
-    print('  1c. Edge Extension --> under construction')
+    #  is the extension already installed?
+    if os.path.isdir(os.path.join(EDGE_EXTENSIONS_FOLDER,EDGE_EXTENSION_ID)):
+        print('  1c. Edge Extension --> already installed.')
+        return
+    else:
+        if win32: # add registry entry if needed
+            flags=winreg.KEY_ALL_ACCESS
+            if 'WOW64' in CHROME_REGISTRY_BASE_KEY:
+                flags=winreg.KEY_ALL_ACCESS|winreg.KEY_WOW64_64KEY
+            try:
+                key=winreg.CreateKeyEx(HKLM,EDGE_REGISTRY_FULL_KEY,access=flags)
+            except PermissionError:
+                print('Permission error: Edge key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
+                return
+            except Exception as e:
+                print(e)
+                return
+            needToWrite=False
+            try:
+                val=winreg.QueryValueEx(key,'update_url')
+            except PermissionError:
+                print('Permission error: Edge key value cannot be queried')
+                return
+            except: # value does not exist
+                needToWrite=True
+            else:
+                if val[0]==EDGE_UPDATE_URL: # key exists but extension was not installed; maybe on blocklist
+                    print('  1c. Edge Extension --> installation failed; see closing notes.')
+                    return
+                else:
+                    needToWrite=True
+            if needToWrite:
+                winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,EDGE_UPDATE_URL)
+                print('  1c. Edge Extension --> registry key '+EDGE_REGISTRY_FULL_KEY+' added; see closing notes.')
+            winreg.CloseKey(key)
 
 # 2. attempt to install GPSBabel
 #  Windows: check the registry 

@@ -1,15 +1,8 @@
-; GPSIO installer
+; GPSIO installer for Windows
+
 ; github.com/ncssar/gpsio
 
-; TODO: move the OS-agnostic portions to a single python script - see old install.py
-; TODO: decide on best way to deal with Chrome/Edge extension-registry-trigger key added but extension not installed
-;          (probably blocklisted or offline)
-; TODO: general cleanup and UI/UX work
-;    - closing notes
-;    - welcome page instead of messagebox?
-; TODO: test, get feedback
-
-; !include "MUI.nsh"
+; this is a control file for NSIS https://nsis.sourceforge.io
 
 Name "GPSIO"
 OutFile "install-gpsio.exe"
