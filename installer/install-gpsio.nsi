@@ -127,7 +127,21 @@ Section "Native Host"
 SectionEnd
 
 Section "Cleanup"
-    ExecDos::exec "${py} -min 5" # cleanup of items that python is aware of
+    ExecDos::exec "${py} -min 5" ; cleanup of items that python is aware of
+    ; view log file in a message box
+    ; 
+    ClearErrors
+    FileOpen $0 "$INSTDIR\install-notices.txt" r
+    ${Do}
+        FileRead $0 $1 
+        ${If} ${Errors}
+            ${ExitDo}
+        ${EndIf}
+        StrCpy $2 "$2$1"
+    ${Loop}
+    FileClose $0
+    ; contents should now be in $2:
+    MessageBox MB_OK "GPSIO Installation Notices:$\r$2"
 SectionEnd
 
 Function .onGUIEnd
