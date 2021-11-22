@@ -21,18 +21,18 @@ The GPSIO browser extension is published for Chrome, Firefox, and Edge.  This is
 - Firefox: [gpsio at AMO (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/gpsio-extension/)
 - Edge: [gpsio at Edge AddOns](https://microsoftedge.microsoft.com/addons/detail/gpsio/gnonahdiojppiacfbalpgjddpkfepihk)
 
-## 2. Install the prerequisites
-###   a. Python
-Python comes pre-installed on Mac and Linux installations, but may need to be installed for Windows. Click [here](https://www.python.org/downloads/) to download the latest Python for Windows. During installation, make sure to enable the option to "Add Python to PATH" so that other programs can make use of it. If the extension fails to transfer data and you think you may have forgotten the enable the option, you can run the install program again, and modify your existing Python installation, to enable that option.
-###   b. GPSBabel
+## 2. Install GPSBabel
 GPSBabel is a free open-source program for working with GPSs and GPS data (consider making a donation). Click [here](http://www.gpsbabel.org/download.html) to download.  The native host makes calls to GPSBabel.
-###   c. For Windows: Garmin USB drivers
+
+## 3. For Windows: Install Garmin USB drivers
 The latest Garmin USB drivers are available [here](https://www8.garmin.com/support/download_details.jsp?id=591). For USB-mode devices (Garmin 60 or similar non-mass-storage-mode devices), you can run Windows Device Manager to verify the driver installation: if the drivers are installed properly, a plugged-in Garmin USB-mode device will show up in a category named "Garmin Devices"; if the drivers are not installed, a plugged-in Garmin USB-mode device will show up as "Unknown USB Device", causing CalTopo GPSIO transfers to abort with a red line of text indicating that no GPS was found. (Mass-storage-mode devices such as Garmin 62, 64, etc. will instead show up under 'Drives' and/or 'Portable Devices'.)
 
-## 3. Install the native host
-### UNDER CONSTRUCTION
-In Windows, the host itself is a batch file that invokes a python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the 'host' directory above.
-You will also need to tell the browser extension where the actual native host files are located on your computer.  The installers will take care of this for you.  The methods for doing this are documented in the various browser development documents, and are different for Windows vs. Mac.  While the installers are under construction, please contact the developer if you need help setting this up.
+## 4. Install the native host application
+(In previous versions, Python had to be installed on your computer.  Starting in November 2021, Python installation is no longer needed, since the compact embeddable Python core is part of the GPSIO installation.)
+
+In Windows, the host is a batch file (gpsio-host.bat) that invokes a python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the host directory above.
+
+You will also need to tell the browser extensions where the actual native host files are located on your computer.  The GPSIO installer will take care of this for you.  If you need to do this step by hand, the methods for doing this are documented in the various browser development documents, and are different for Windows vs. Mac.  While the installers are under construction, please contact the developer if you need help setting this up.
 
 
 ## Extensions - Enable and Pin
