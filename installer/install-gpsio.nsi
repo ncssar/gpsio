@@ -73,7 +73,7 @@ ShowInstDetails show
 !define py "$INSTDIR/host/dist/python.exe $INSTDIR/install-gpsio.py"
 
 Section "Chrome Extension"
-    DetailPrint "  1a. Chrome Extension --> installing..."
+    DetailPrint "  1a. Chrome Extension : installing..."
     Sleep 1000
     ExecDos::exec /TOSTACK "${py} -min 1a"
     Pop $0 ; status
@@ -82,7 +82,7 @@ Section "Chrome Extension"
 SectionEnd
 
 Section "Firefox Extension"
-    DetailPrint "  1b. Firefox Extension --> installing..."
+    DetailPrint "  1b. Firefox Extension : installing..."
     Sleep 1000
     ExecDos::exec /TOSTACK "${py} -min 1b"
     Pop $0 ; status
@@ -91,7 +91,7 @@ Section "Firefox Extension"
 SectionEnd
 
 Section "Edge Extension"
-    DetailPrint "  1c. Edge Extension --> installing..."
+    DetailPrint "  1c. Edge Extension : installing..."
     Sleep 1000
     ExecDos::exec /TOSTACK "${py} -min 1c"
     Pop $0 ; status
@@ -100,7 +100,7 @@ Section "Edge Extension"
 SectionEnd
 
 Section "GPSBabel"
-    DetailPrint "2. GPSBabel --> installing..."
+    DetailPrint "2. GPSBabel : installing..."
     Sleep 1000
     ExecDos::exec /TOSTACK "${py} -min 2"
     Pop $0 ; status
@@ -109,7 +109,7 @@ Section "GPSBabel"
 SectionEnd
 
 Section "Garmin USB Drivers"
-    DetailPrint "3. Garmin USB Drivers --> installing..."
+    DetailPrint "3. Garmin USB Drivers : installing..."
     Sleep 1000
     ExecDos::exec /TOSTACK "${py} -min 3"
     Pop $0 ; status
@@ -118,7 +118,7 @@ Section "Garmin USB Drivers"
 SectionEnd
 
 Section "Native Host"
-    DetailPrint "4. Native Host --> installing..."
+    DetailPrint "4. Native Host : installing..."
     Sleep 1000
     ExecDos::exec /TOSTACK "${py} -min 4"
     Pop $0 ; status
@@ -127,9 +127,7 @@ Section "Native Host"
 SectionEnd
 
 Section "Cleanup"
-    ExecDos::exec "${py} -min 5" ; cleanup of items that python is aware of
     ; view log file in a message box
-    ; 
     ClearErrors
     FileOpen $0 "$INSTDIR\install-notices.txt" r
     ${Do}
@@ -141,11 +139,12 @@ Section "Cleanup"
     ${Loop}
     FileClose $0
     ; contents should now be in $2:
-    MessageBox MB_OK "GPSIO Installation Notices:$\r$2"
+    MessageBox MB_OK "GPSIO Installation Notices:$\r$\rIf any portions of the install failed or had warnings, details will appear here; parts not listed here will work as expected.$2$\r$\rAfter closing the installer, your web browser will show some follow-up instructions you will need to follow to make sure the extensions are working."
 SectionEnd
 
 Function .onGUIEnd
-    SetOutPath "$INSTDIR\.." # since outpath can't be deleted
+    SetOutPath "$INSTDIR\.." # since current outpath can't be deleted
     RMDir /r "$INSTDIR"
+    ExecShell "open" "https://github.com/ncssar/gpsio/blob/master/README.md#extensions---installation-follow-up-and-details"
 FunctionEnd
 

@@ -1,31 +1,21 @@
 
-# TODO: native host install logic: if/when/how to overwrite host dir file(s) on new install
-#     (make sure to not clobber edited files, or at least back them up)
-# TODO: check for issues due to the fact that this script is run as admin
-# TODO: delete extension-trigger-registry-keys on first error (key exists but extension is not installed)
-# TODO: automatically pin the extension in chrome, or document the fact that you need to do it by hand
 # TODO: Mac
 # TODO: Linux
-
-# TODO: investigate sending gpsio-host.py updates via new extension versions
-
-
 
 # install-gpsio.py - attempt to install as many parts of the GPSIO tool
 #  as possible from a python script.  Since linux and mac will require
 #  a python script to do the installation anyway, it's best to centralize
 #  all of the code here.  Make it callable step-by-step from the command
-#  line, to enable a NSIS graphical interface that shows step-by-step progress.
+#  line, to enable a graphical interface that shows step-by-step progress.
+#
+# for Windows, this script is called once per stage by the Nullsoft (NSIS) installer.
 
 # SYNTAX:
-# python install-gpsio.py [OPTION]... [STAGE]...
+# python install-gpsio.py [STAGE]...
 
 # EXAMPLE:
-# python install-gpsio.py -min 1a 1b 1c 2
-#  this will produce minimal output and will run stages 1a, 1b, 1c, and 2 before exiting
-
-# OPTIONS:
-# -min - produce minimal output - for use with GUI installer (NSIS for Windows)
+# python install-gpsio.py 1a 1b 1c 2
+#  this will run stages 1a, 1b, 1c, and 2 before exiting
 
 # stages:
 # 1a. attempt to install Chrome extension
@@ -41,6 +31,9 @@ import subprocess
 import sys
 import shutil
 import glob
+import time
+from datetime import datetime
+import filecmp
 
 win32=sys.platform=='win32'
 darwin=sys.platform=='darwin'
@@ -141,7 +134,7 @@ def stage_1a():
     global ltxt
     #  is the extension already installed?
     if os.path.isdir(os.path.join(CHROME_EXTENSIONS_FOLDER,CHROME_EXTENSION_ID)):
-        print('  1a. Chrome Extension --> DONE')
+        print('  1a. Chrome Extension : already installed')
         return
     else:
         if win32: # add registry entry if needed
@@ -162,44 +155,66 @@ def stage_1a():
             except: # value does not exist
                 needToWrite=True
             else:
-                if val[0]==CHROME_UPDATE_URL: # key exists but extension was not installed; maybe on blocklist
-                    print('  1a. Chrome Extension --> FAILED')
-                    ltxt+='\n\nCHROME EXTENSION - INSTALLATION FAILED\nYou will need to add the extension to Chrome by hand (i.e. from Chrome).  You can search for \'gpsio\' at the Chrome Web Store.  The direct link is in the documentation at github.com/ncssar/gpsio.'
-                    return
+                if val[0]==CHROME_UPDATE_URL:
+                    # key exists with correct value, but extension directory was not found;
+                    #  this does not mean the attempt failed;
+                    #  attempting to verify by checking the directory again is not reliable:
+                    #  - maybe blocklisted
+                    #  - maybe browser is not installed
+                    #  - maybe browser is installed but not currently running
+                    #  but we can try one more time by deleting and re-adding update_url
+                    winreg.DeleteValue(key,'update_url')
+                    time.sleep(1)
+                    needToWrite=True
+                    # print('  1a. Chrome Extension : FAILED')
+                    # ltxt+='\n\nCHROME EXTENSION - INSTALLATION FAILED\nIf you use Chrome, you will need to add the extension to Chrome by hand (i.e. from Chrome).  You can search for \'gpsio\' at the Chrome Web Store.  The direct link is in the documentation at github.com/ncssar/gpsio.'
+                    # return
                 else:
                     needToWrite=True
             if needToWrite:
                 winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,CHROME_UPDATE_URL)
-                print('  1a. Chrome Extension --> DONE')
-                ltxt+='\n\nCHROME EXTENSION installation has been triggered; on or before the next time you start Chrome, it should prompt you to enable the gpsio extension.  Make sure to enable the extension.'
+                print('  1a. Chrome Extension : installation attempted')
+                # ltxt+='\n\nCHROME EXTENSION installation has been triggered; on or before the next time you start Chrome, you to enable the gpsio extension.  Make sure to enable the extension.'
             winreg.CloseKey(key)
 
 # 1b. attempt to install Firefox extension
 def stage_1b():
     global ltxt
-    #  is the extension already installed?
-    import glob
-    firefox_profile_name=glob.glob(os.path.join(FIREFOX_PROFILES_FOLDER,'*.default'))[0]
-    firefox_extensions_folder=os.path.join(FIREFOX_PROFILES_FOLDER,firefox_profile_name,'extensions')
-    if os.path.isfile(os.path.join(firefox_extensions_folder,FIREFOX_EXTENSION_ID+'.xpi')):
-        print('  1b. Firefox Extension --> DONE')
-    else:
-        xpi=os.path.join(INSTALL_TMP,FIREFOX_EXTENSION_ID+'.xpi')
-        if os.path.isfile(xpi):
-            shutil.copyfile(xpi,firefox_extensions_folder)
-            print('  1b. Firefox Extension --> DONE')
-            ltxt+='\n\nFIREFOX EXTENSION installation has been triggered; on or before the next time you start Firefox, it may prompt you to enable the gpsio extension.  Make sure to enable the extension.'
+    xpiSource=os.path.join(INSTALL_TMP,FIREFOX_EXTENSION_ID+'.xpi')
+    if not os.path.isfile(xpiSource):
+        print('  1b. Firefox Extension : FAILED')
+        ltxt+='\n\nFIREFOX EXTENSION installation failed; it appears the required .xpi file was not extracted with the GPSIO installer.  Please contact the developer.'
+        return
+    # since the current profile can't be determined from code, just install it to all profiles
+    if os.path.isdir(FIREFOX_PROFILES_FOLDER): # won't exist if Firefox is not installed
+        installedCount=0
+        firefox_profile_names=os.listdir(FIREFOX_PROFILES_FOLDER)
+        for firefox_profile_name in firefox_profile_names:
+            firefox_extensions_folder=os.path.join(FIREFOX_PROFILES_FOLDER,firefox_profile_name,'extensions')
+            # if no other extensions have been installed, prevent creation of a file named 'Extensions'
+            os.makedirs(firefox_extensions_folder,exist_ok=True)
+            xpiTarget=os.path.join(firefox_extensions_folder,FIREFOX_EXTENSION_ID+'.xpi')
+            if not os.path.isfile(xpiTarget):
+                installedCount+=1
+                shutil.copyfile(xpiSource,xpiTarget)
+        if installedCount==0:
+            print('  1b. Firefox Extension: already installed for all profiles')
         else:
-            print('  1b. Firefox Extension --> FAILED')
-            ltxt+='\n\nFIREFOX EXTENSION installation failed; it appears the required .xpi file was not extracted with the GPSIO installer.  Please contact the developer.'
-
+            suffix=''
+            if installedCount>1:
+                suffix='s'
+            print('  1b. Firefox Extension: installed for '+str(installedCount)+' profile'+suffix)
+            ltxt+='\n\nFIREFOX EXTENSION installation has been triggered for '+str(installedCount)+' profile'+suffix+'; on or before the next time you start Firefox, it may prompt you to enable the gpsio extension.  Make sure to enable the extension.'
+    else:
+        print('  1b. Firefox Extension : skipped')
+        ltxt+='\n\nFIREFOX EXTENSION installation was skipped; it appears you do not have Firefox installed, since its AppData folder does not exist.  You can re-run this installer to try again later, or add the extension by hand from Firefox.'
 
 # 1c. attempt to install Edge extension
 def stage_1c():
     global ltxt
     #  is the extension already installed?
     if os.path.isdir(os.path.join(EDGE_EXTENSIONS_FOLDER,EDGE_EXTENSION_ID)):
-        print('  1c. Edge Extension --> DONE')
+        print('  1c. Edge Extension : already installed')
         return
     else:
         if win32: # add registry entry if needed
@@ -223,16 +238,23 @@ def stage_1c():
             except: # value does not exist
                 needToWrite=True
             else:
-                if val[0]==EDGE_UPDATE_URL: # key exists but extension was not installed; maybe on blocklist
-                    print('  1c. Edge Extension --> FAILED')
-                    ltxt+='\n\nEDGE EXTENSION - INSTALLATION FAILED\nYou will need to add the extension to Edge by hand (i.e. from Edge).  You can search for \'gpsio\' at microsoftedge.microsoft.com.  The direct link is in the documentation at github.com/ncssar/gpsio.'
-                    return
+                if val[0]==EDGE_UPDATE_URL:
+                    # key exists with correct value, but extension directory was not found;
+                    #  this does not mean the attempt failed;
+                    #  attempting to verify by checking the directory again is not reliable:
+                    #  - maybe blocklisted
+                    #  - maybe browser is not installed
+                    #  - maybe browser is installed but not currently running
+                    #  but we can try one more time by deleting and re-adding update_url
+                    winreg.DeleteValue(key,'update_url')
+                    time.sleep(1)
+                    needToWrite=True
                 else:
                     needToWrite=True
             if needToWrite:
                 winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,EDGE_UPDATE_URL)
-                print('  1c. Edge Extension --> DONE')
-                ltxt+="\n\nEDGE EXTENSION installation has been triggered; on or before the next time you start Edge, it should prompt you to enable the gpsio extension.  Make sure to enable the extension."
+                print('  1c. Edge Extension : installation attempted')
+                # ltxt+="\n\nEDGE EXTENSION installation has been triggered; on or before the next time you start Edge, it should prompt you to enable the gpsio extension.  Make sure to enable the extension."
             winreg.CloseKey(key)
 
 # 2. attempt to install GPSBabel
@@ -249,14 +271,12 @@ def stage_2():
             global gpsbabel_exe
             gpsbabel_exe=os.path.join(loc,'gpsbabel.exe')
             if os.path.isfile(gpsbabel_exe):
-                print('2. GPSBabel --> DONE')
+                print('2. GPSBabel : previous installation verified')
             else:
-                print('2. GPSBabel --> FAILED')
-                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe existing installation could not be confirmed.  Please uninstall then re-install GPSBabel using the online installer from gpsbabel.org.'
+                print('2. GPSBabel : FAILED')
+                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nA previous installation was detected from the registry, but the executable file it refers to could not be found.  Please uninstall GPSBabel from Windows, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
         else:
-            print('2. GPSBabel --> installing...')
             subprocess.run([os.path.join(INSTALL_TMP,'GPSBabel-1.7.0-Setup.exe')])
-            print('2. GPSBabel --> installer completed; verifying...')
             # check again: duplicated / repeated code from above - not a big problem
             subkeyName=findRegKeyWithEntry(UNINSTALL_WOW_ROOT,'DisplayName','GPSBabel 1.7.0')
             if subkeyName: # key found: read the install path value and make sure gpsbabel.exe is there
@@ -267,13 +287,13 @@ def stage_2():
                 loc=winreg.QueryValueEx(key,'InstallLocation')[0]
                 gpsbabel_exe=os.path.join(loc,'gpsbabel.exe')
                 if os.path.isfile(gpsbabel_exe):
-                    print('2. GPSBabel --> DONE')
+                    print('2. GPSBabel : installed and verified')
                 else:
-                    print('2. GPSBabel --> FAILED')
-                    ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The registry key was found, but the executable was not.  Please uninstall then re-install GPSBabel using the online installer from gpsbabel.org.'
+                    print('2. GPSBabel : FAILED')
+                    ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The registry key was found, but the executable file it refers to was not.  Please uninstall GPSBabel from Windows, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
             else:
-                print('2. GPSBabel --> FAILED')
-                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The registry key was not found.  Please uninstall then re-install GPSBabel using the online installer from gpsbabel.org.'
+                print('2. GPSBabel : FAILED')
+                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The registry key was not found.  Please uninstall GPSBabel from Windows, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
 
 
 # 3. attempt to install Garmin USB drivers (Windows only)
@@ -281,34 +301,39 @@ def stage_3():
     global ltxt
     subkeyName=findRegKeyWithEntry(UNINSTALL_ROOT,'DisplayName','Garmin USB Drivers')
     if subkeyName:
-        print('3. Garmin USB Drivers --> DONE')
+        print('3. Garmin USB Drivers : already installed')
     else:
         d=os.path.join(INSTALL_TMP,'USBDrivers_2312.exe')
         if os.path.isfile(d):
             subprocess.run([d])
-            print('3. Garmin USB Drivers --> DONE')
+            print('3. Garmin USB Drivers : installed')
         else:
-            print('3. Garmin USB Drivers --> FAILED')
+            print('3. Garmin USB Drivers : FAILED')
             ltxt+='\n\nGARMIN USB DRIVERS INSTALLATION FAILED - the Garmin USB Driver installation program was not found in the GPSIO installation temporary directory.'
 
 
 # 4. attempt to install native host
 def stage_4():
     global ltxt
-    if not os.path.isdir(HOST_DIR):
-        if os.path.isdir(INSTALL_TMP):
-            # copy files into place
-            shutil.copytree(os.path.join(INSTALL_TMP,'host'),HOST_DIR)
-        else:
-            print('4. Native Host --> FAILED')
-            ltxt+='\n\nNATIVE HOST INSTALLATION FAILED - the temporary installation directory, which should contain the necessary extracted files, does not exist.'
-            return
+    # 4a. copy host files into place
+    if os.path.isdir(INSTALL_TMP):
+        if os.path.isdir(HOST_DIR): # previously installed; force-update but make backups first
+            for f in [x for x in os.listdir(HOST_DIR) if os.path.isfile(x)]: # all files (not subdirs) in host dir
+                if not filecmp.cmp(os.path.join(HOST_DIR,f),os.path.join(INSTALL_TMP,'host',f)):
+                    # if existing file is not identical to file about to be installed, make a backup
+                    # oschmod does not set directory permissions as excpected on Windows,
+                    #  so just place backups in the host dir
+                    shutil.copyfile(os.path.join(HOST_DIR,f),os.path.join(HOST_DIR,f+'.bak.'+datetime.now().strftime('%Y%m%d-%H%M')))
+        shutil.copytree(os.path.join(INSTALL_TMP,'host'),HOST_DIR,dirs_exist_ok=True)
+        # add edit permissions for all to gpsio-host.* in case the user needs to modify them
+        for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
+            oschmod.set_mode(f,'a+w')
+    else:
+        print('4. Native Host : FAILED')
+        ltxt+='\n\nNATIVE HOST INSTALLATION FAILED - the temporary installation directory, which should contain the necessary extracted files, does not exist.'
+        return
 
-    # add edit permissions for all to gpsio-host.* in case the user needs to modify them
-    for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
-        oschmod.set_mode(f,'a+w')
-
-    # create the host manifest files for each extension
+    # 4b. create the host manifest files for each extension
     HOST_DIR_DOUBLE_SLASH=HOST_DIR.replace('\\','\\\\')
     with open(os.path.join(HOST_DIR,'chrome-manifest.json'),'w') as f:
         f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_DOUBLE_SLASH+'/gpsio-host.bat",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+CHROME_EXTENSION_ID+'/"\n  ]\n}')
@@ -317,27 +342,28 @@ def stage_4():
     with open(os.path.join(HOST_DIR,'edge-manifest.json'),'w') as f:
         f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_DOUBLE_SLASH+'/gpsio-host.bat",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+EDGE_EXTENSION_ID+'/"\n  ]\n}')
 
-    # write registry entries for host manifest file locations
+    # 4c. write registry entries for host manifest file locations
     winreg.SetValueEx(winreg.CreateKey(HKCU,CHROME_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'chrome-manifest.json'))
     winreg.SetValueEx(winreg.CreateKey(HKCU,FIREFOX_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'firefox-manifest.json'))
     winreg.SetValueEx(winreg.CreateKey(HKCU,EDGE_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'edge-manifest.json'))
     
-    # edit gpsio-host.ini with confirmed gpsbabel executable path
+    # 4d. edit gpsio-host.ini with confirmed gpsbabel executable path
     if gpsbabel_exe:
         with open('gpsio-host.ini','r') as f:
             fdata=f.read()
         fdata=fdata.replace('UNDEFINED',gpsbabel_exe)
         with open('gpsio-host.ini','w') as f:
             f.write(fdata)
-        
-    print('4. Native Host --> DONE')
 
-# 5. cleanup of items that python is aware of
-def stage_5():
+    # 4e. delete unused modules from host dist        
     if win32:
         shutil.rmtree(os.path.join(HOST_DIR,'dist','win32'),ignore_errors=True)
         shutil.rmtree(os.path.join(HOST_DIR,'dist','pywin32_system32'),ignore_errors=True)
         shutil.rmtree(os.path.join(HOST_DIR,'dist','oschmod'),ignore_errors=True)
+        
+    print('4. Native Host : installed')
+    ltxt+='\n\nNative host installed at '+HOST_DIR
+
 
 ####################################################################
 # top level code: run the requested functions, in alphabetical order
