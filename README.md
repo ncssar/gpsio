@@ -53,6 +53,12 @@ Also in Chrome, even after the extension is enabled, its icon doesn't appear by 
 
 ![Pin extension in Chrome](img/chrome_pin_gpsio.gif)
 
+In Firefox, you may not be notified about the installed extension until you restart Firefox, when it may appear as a yellow warning triangle at the top right:
+
+![Firefox notification](img/gpsio-firefox.png)
+
+Click 'gpsio added to Firefox' which should prompt you to enable the extension.
+
 ### Extension permissions
 When the GPSIO extension is about to be added to your web browser, you will be told that it needs two types of permission that may sound daunting.  Why are these permissions needed?
 1. Read and change all your data on all websites - Originally, the extension was limited to only be usable on sartopo.com and caltopo.com.  With the advent of CalTopo Desktop, the host machine name - therefore the web page domain name - could be anything (localhost, myMapServer, 192.168.200.200, etc.).  While the permission sounds scary, the extension only transfers GPS data - but it can be used on any web page.
