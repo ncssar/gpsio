@@ -37,8 +37,15 @@ In Windows, the host is a batch file (gpsio-host.bat) that invokes a python scri
 You will also need to tell the browser extensions where the actual native host files are located on your computer.  The GPSIO installer will take care of this for you.  If you need to do this step by hand, the methods for doing this are documented in the various browser development documents, and are different for Windows vs. Mac.  While the installers are under construction, please contact the developer if you need help setting this up.
 
 
-## Extensions - Enable and Pin
-While the installer attempts to add the extensions to your web browsers, you may still need to enable the extensions.  Sometimes you will be prompted to do so, and sometimes you will not.  This can't be done automatically by the installer, for security reasons.  Here's what enabling the extension looks like in Chrome, if it's not already enabled:
+## Extensions - Installation Follow-up and Details
+
+***IF YOU HAVE THE OLD EXTENSION, REMOVE IT:*** ![old icon](img/gps_icon_old.png)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;***MAKE SURE YOU SEE THE NEW EXTENSION:*** ![new icon](extension/common/gpsio_icon_16.png)
+
+If you have the old version of the GPSIO extension installed, you will want to remove it from your browser.  You can do this from the menu that appears when you right-click the old extension icon.
+
+The installer ***attempts*** to add the GPSIO extension to your web browsers.  Even if the attempt worked, there are a few reasons you may not see the new extension right away.  If you determine that the extension was not added by the installer, see the links add the extension to your browser directly.
+
+If the extension is added successfully by the installer, ***you may still need to enable it.***  Sometimes you will be prompted to do so, and sometimes you will not.  This can't be done automatically by the installer, for security reasons.  As an example, here's what enabling the extension looks like in Chrome:
 
 ![Enable extension in Chrome](img/chrome_enable_gpsio.gif)
 
