@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# omitting 3 from the line above invokes Python 2.7 on Mac; this script requires 3
+# also note this file should be executable on Mac and Linux
 
 # gpsio-host.py - gpsio Python script to communicate with GPSBabel;
 #  output from this wrapper script is sent over stdio to background.js
@@ -66,20 +68,33 @@ if debug:
     logfile.write("platform="+sys.platform+"\n")
     logfile.write("arguments:"+str(sys.argv)+"\n")
 
+win32=sys.platform=='win32'
+darwin=sys.platform=='darwin'
+linux=sys.platform=='linux'
+
 if not os.path.isfile(gpsbabel_exe):
     if debug:
         logfile.write("ERROR: specified gpsbabel_exe "+gpsbabel_exe+" is not a file.  Exiting.\n")
     sys.exit()
 
-# reopen stdout and stdin in bytes mode, for 2.7/3.3 compatibility
-# Q: is this a win32 thing only or a python 3 thing only?
-#sys.stdout=os.fdopen(sys.stdout.fileno(),'w+b')
-#sys.stdin=os.fdopen(sys.stdin.fileno(),'rb',0)
+# reopen stdout and stdin in bytes mode
+
+if darwin:
+    try:
+        # required to avoid crazy surrogate encoding errors on mac
+        # w+b causes errors; wb works as excpected
+        sys.stdout=os.fdopen(sys.stdout.fileno(),'wb')
+    except Exception as e:
+        logfile.write('stdout reopen error:'+str(e)+'\n')
+    try:
+        sys.stdin=os.fdopen(sys.stdin.fileno(),'rb',0)
+    except Exception as e:
+        logfile.write('stdin reopen error:'+str(e)+'\n')
 
 # On Windows, the default I/O mode is O_TEXT. Set this to O_BINARY
 # to avoid unwanted modifications of the input/output streams.
 
-if sys.platform == "win32":
+if win32:
     import msvcrt
     try:
         sys.stdout=os.fdopen(sys.stdout.fileno(), 'w+b')
@@ -121,7 +136,11 @@ def Main():
     # process the 32-bit message length to determine how many bytes to read
     request_length_bytes = sys.stdin.read(4)
 
-    request_length = struct.unpack('i', request_length_bytes)[0]
+    try:
+        request_length = struct.unpack('i', request_length_bytes)[0]
+    except Exception as e:
+        logfile.write("Error during initial read from stdin: "+str(e))
+
     if debug:
         logfile.write("request_length="+type(request_length).__name__+":"+str(request_length)+"\n")
 
@@ -239,13 +258,13 @@ def ensure_gpxtrkx(filename):
 #     file that was found, or False if none was found, indicating no Garmin
 #     Mass Storage Mode device is connected
 def scan_for_gmsm():
-    if sys.platform == "win32":
+    if win32:
         drives=["A:\\","B:\\","C:\\","D:\\","E:\\","F:\\","G:\\","H:\\","I:\\","J:\\","K:\\","L:\\","M:\\","N:\\"]
         for drive in drives:
             if os.path.exists(os.path.join(drive, GDXML_FILENAME)):
                 return drive
         return False
-    elif sys.platform == "darwin":
+    elif darwin:
         vols = os.listdir('/Volumes')
         for vol in vols:
             if debug:
