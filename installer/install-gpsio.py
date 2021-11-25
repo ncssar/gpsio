@@ -35,6 +35,8 @@ import time
 from datetime import datetime
 import filecmp
 
+from gpsio.installer.install import MANIFEST_INSTALL_LOCATION_CHROME
+
 win32=sys.platform=='win32'
 darwin=sys.platform=='darwin'
 linux=sys.platform=='linux'
@@ -47,11 +49,10 @@ linux=sys.platform=='linux'
 pwd=os.path.dirname(os.path.realpath(__file__))
 if win32:
     os.add_dll_directory(os.path.join(pwd,'host','dist','pywin32_system32'))
-
-import oschmod
+    import oschmod
 
 parser=argparse.ArgumentParser()
-parser.add_argument('-min',action='store_true')
+# parser.add_argument('-min',action='store_true')
 parser.add_argument('stages',type=str,nargs='+')
 args=parser.parse_args()
 
@@ -87,10 +88,26 @@ if win32:
     CHROME_NMH_KEY='Software\\Google\\Chrome\\NativeMessagingHosts\\'+EXTENSION_HANDLE
     FIREFOX_NMH_KEY='Software\\Mozilla\\NativeMessagingHosts\\'+EXTENSION_HANDLE
     EDGE_NMH_KEY='Software\\Microsoft\\Edge\\NativeMessagingHosts\\'+EXTENSION_HANDLE
+
+    HOST_MANIFEST_FILE={
+        'chrome':os.path.join(HOST_DIR,'chrome-manifest.json'),
+        'firefox':os.path.join(HOST_DIR,'firefox-manifest.json'),
+        'edge':os.path.join(HOST_DIR,'edge-manifest.json')}
+
 elif darwin:
-    pass
+    HOST_DIR='/Library/'+EXTENSION_HANDLE
+    HOST_MANIFEST_FILE={
+        'chrome':'/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.caltopo.gpsio.json',
+        'firefox':'/Library/Application Support/Mozilla/NativeMessagingHosts/com.caltopo.gpsio.json',
+        'edge':'/Library/Microsoft/Edge/NativeMessagingHosts/com.caltopo.gpsio.json'}
+
 elif linux:
-    pass
+    HOST_DIR='/dev/null'
+    HOST_MANIFEST_FILE={
+        'chrome':'/etc/opt/chrome/native-messaging-hosts/com.caltopo.gpsio.json',
+        'firefox':'/usr/lib64/mozilla/native-messaging-hosts/com.caltopo.gpsio.json',
+        'edge':'/etc/opt/edge/native-messaging-hosts/com.caltopo.gpsio.json'}
+
 else:
     print('unknown platform '+str(sys.platform))
     sys.exit(1)
@@ -127,7 +144,18 @@ if win32:
     import winreg
     HKLM=winreg.HKEY_LOCAL_MACHINE
     HKCU=winreg.HKEY_CURRENT_USER
+elif darwin:
+    darwinApps=str(subprocess.run(['mdfind',"kMDItemKind == 'Application'"],capture_output=True).stdout).split('\\n')
 
+# 1. attempt to install browser extensions
+# the chrome and edge docs imply that this is an 'externally installed' extension, i.e.
+#  installed by copying a file from somewhere other than the Chrome Web Store or Edge Add-ons.
+#  That's not the case.  These methods - registry for Windows, or json for mac and linux -
+#  signal the browser to download the extension from the official web store.  If currently offline,
+#  the browser will download and add the extension the next time it is online.
+# https://developer.chrome.com/docs/extensions/mv3/external_extensions/
+#  (for firefox, just copy the .xpi file into place)
+# https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/developer-guide/alternate-distribution-options
 
 # 1a. attempt to install Chrome extension
 def stage_1a():
@@ -294,22 +322,41 @@ def stage_2():
             else:
                 print('2. GPSBabel : FAILED')
                 ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The registry key was not found.  Please uninstall GPSBabel from Windows, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
-
+    elif darwin:
+        gpsbabel_appdir=[x for x in darwinApps if 'GPSBabel' in x][0]
+        if gpsbabel_appdir:
+            gpsbabel_exe=os.path.join(gpsbabel_appdir,'Contents','MacOS','gpsbabel')
+            if os.path.isfile(gpsbabel_exe):
+                print('2. GPSBabel: previous installation verified')
+            else:
+                print('2. GPSBabel : FAILED')
+                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe GPSBabel install directory was found, but the executable was not.'
+        else:
+            print('2. GPSBabel: installing...')
+            subprocess.run(['hdiutil','attach','-mountpoint','./mount','GPSBabel-1.7.0.dmg'])
+            try:
+                shutil.copytree('mount/GPSBabelFE.app','/Applications/GPSBabelFE.app')
+            except:
+                pass
+            subprocess.run(['hdiutil','detach','./mount'])
+            print('2. GPSBabel: installed')
+            
 
 # 3. attempt to install Garmin USB drivers (Windows only)
 def stage_3():
     global ltxt
-    subkeyName=findRegKeyWithEntry(UNINSTALL_ROOT,'DisplayName','Garmin USB Drivers')
-    if subkeyName:
-        print('3. Garmin USB Drivers : already installed')
-    else:
-        d=os.path.join(INSTALL_TMP,'USBDrivers_2312.exe')
-        if os.path.isfile(d):
-            subprocess.run([d])
-            print('3. Garmin USB Drivers : installed')
+    if win32:
+        subkeyName=findRegKeyWithEntry(UNINSTALL_ROOT,'DisplayName','Garmin USB Drivers')
+        if subkeyName:
+            print('3. Garmin USB Drivers : already installed')
         else:
-            print('3. Garmin USB Drivers : FAILED')
-            ltxt+='\n\nGARMIN USB DRIVERS INSTALLATION FAILED - the Garmin USB Driver installation program was not found in the GPSIO installation temporary directory.'
+            d=os.path.join(INSTALL_TMP,'USBDrivers_2312.exe')
+            if os.path.isfile(d):
+                subprocess.run([d])
+                print('3. Garmin USB Drivers : installed')
+            else:
+                print('3. Garmin USB Drivers : FAILED')
+                ltxt+='\n\nGARMIN USB DRIVERS INSTALLATION FAILED - the Garmin USB Driver installation program was not found in the GPSIO installation temporary directory.'
 
 
 # 4. attempt to install native host
@@ -329,26 +376,40 @@ def stage_4():
                     oschmod.set_mode(bakfile,'a+w')
         shutil.copytree(os.path.join(INSTALL_TMP,'host'),HOST_DIR,dirs_exist_ok=True)
         # add edit permissions for all to gpsio-host.* in case the user needs to modify them
-        for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
-            oschmod.set_mode(f,'a+w')
+        if win32:
+            for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
+                oschmod.set_mode(f,'a+w')
     else:
         print('4. Native Host : FAILED')
         ltxt+='\n\nNATIVE HOST INSTALLATION FAILED - the temporary installation directory, which should contain the necessary extracted files, does not exist.'
         return
 
     # 4b. create the host manifest files for each extension
-    HOST_DIR_DOUBLE_SLASH=HOST_DIR.replace('\\','\\\\')
-    with open(os.path.join(HOST_DIR,'chrome-manifest.json'),'w') as f:
-        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_DOUBLE_SLASH+'/gpsio-host.bat",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+CHROME_EXTENSION_ID+'/"\n  ]\n}')
-    with open(os.path.join(HOST_DIR,'firefox-manifest.json'),'w') as f:
-        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_DOUBLE_SLASH+'/gpsio-host.bat",\n  "type": "stdio",\n  "allowed_extensions": [\n    '+FIREFOX_EXTENSION_ID+'"\n  ]\n}')
-    with open(os.path.join(HOST_DIR,'edge-manifest.json'),'w') as f:
-        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_DOUBLE_SLASH+'/gpsio-host.bat",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+EDGE_EXTENSION_ID+'/"\n  ]\n}')
+    #       use the system-wide install locations - must run as root / admin
+    #       hardcoded per platform in the 'platform dependent constants' section above
 
-    # 4c. write registry entries for host manifest file locations
-    winreg.SetValueEx(winreg.CreateKey(HKCU,CHROME_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'chrome-manifest.json'))
-    winreg.SetValueEx(winreg.CreateKey(HKCU,FIREFOX_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'firefox-manifest.json'))
-    winreg.SetValueEx(winreg.CreateKey(HKCU,EDGE_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'edge-manifest.json'))
+    # https://developer.chrome.com/docs/apps/nativeMessaging/#native-messaging-host-location
+    # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#manifest_location
+    # https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/developer-guide/native-messaging?tabs=macos#step-3---copy-the-native-messaging-host-manifest-file-to-your-system
+
+    HOST_DIR_WRITE=HOST_DIR
+    host_file='gpsio-host.py'
+    if win32:
+        HOST_DIR_WRITE=HOST_DIR.replace('\\','\\\\')
+        host_file='gpsio-host.bat'
+
+    with open(HOST_MANIFEST_FILE['chrome'],'w') as f:
+        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_WRITE+'/'+host_file+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+CHROME_EXTENSION_ID+'/"\n  ]\n}')
+    with open(HOST_MANIFEST_FILE['firefox'],'w') as f:
+        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_WRITE+'/'+host_file+'",\n  "type": "stdio",\n  "allowed_extensions": [\n    '+FIREFOX_EXTENSION_ID+'"\n  ]\n}')
+    with open(HOST_MANIFEST_FILE['edge'],'w') as f:
+        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_WRITE+'/'+host_file+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+EDGE_EXTENSION_ID+'/"\n  ]\n}')
+
+    # 4c. Windows: write registry entries for host manifest file locations
+    if win32:
+        winreg.SetValueEx(winreg.CreateKey(HKCU,CHROME_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'chrome-manifest.json'))
+        winreg.SetValueEx(winreg.CreateKey(HKCU,FIREFOX_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'firefox-manifest.json'))
+        winreg.SetValueEx(winreg.CreateKey(HKCU,EDGE_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'edge-manifest.json'))
     
     # 4d. edit gpsio-host.ini with confirmed gpsbabel executable path
     if gpsbabel_exe:
