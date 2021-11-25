@@ -321,9 +321,12 @@ def stage_4():
             for f in [x for x in os.listdir(HOST_DIR) if os.path.isfile(x)]: # all files (not subdirs) in host dir
                 if not filecmp.cmp(os.path.join(HOST_DIR,f),os.path.join(INSTALL_TMP,'host',f)):
                     # if existing file is not identical to file about to be installed, make a backup
-                    # oschmod does not set directory permissions as excpected on Windows,
-                    #  so just place backups in the host dir
-                    shutil.copyfile(os.path.join(HOST_DIR,f),os.path.join(HOST_DIR,f+'.bak.'+datetime.now().strftime('%Y%m%d-%H%M')))
+                    # permissions get strange: copying a bak file to the main file will require UAC
+                    #  no matter what, as long as the host dir is protected.  This is probably OK.
+                    os.makedirs(os.path.join(HOST_DIR,'bak'),exist_ok=True)
+                    bakfile=os.path.join(HOST_DIR,'bak',f+'.'+datetime.now().strftime('%Y%m%d-%H%M'))
+                    shutil.copyfile(os.path.join(HOST_DIR,f),bakfile)
+                    oschmod.set_mode(bakfile,'a+w')
         shutil.copytree(os.path.join(INSTALL_TMP,'host'),HOST_DIR,dirs_exist_ok=True)
         # add edit permissions for all to gpsio-host.* in case the user needs to modify them
         for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
