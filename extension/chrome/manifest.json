@@ -3,7 +3,7 @@
 
   "name": "gpsio",
   "description": "GPS IO",
-  "version": "1.0",
+  "version": "1.1.0",
   
   "action": {
     "default_icon": "gpsio_icon_16.png",

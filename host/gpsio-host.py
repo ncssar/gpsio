@@ -13,6 +13,13 @@
 #  gpsio-host.py should redirect stderr only, like this for Windows:
 # python "%~dp0\gpsio-host.py" %* 2> C:\gpsio-host_errors.txt
 
+##########################################################################
+# must keep this host version# hardcode the same as the extension version#
+#  comment out previous version# lines here as a version history
+# change descriptions are listed in popup.js
+##########################################################################
+version='1.1.0' # 11-26-21 - TMG - first use of host version#
+##########################################################################
 
 import struct
 import subprocess
@@ -21,7 +28,6 @@ import json
 import os
 import mmap
 import time
-import xml.dom.minidom
 import re
 import configparser
 
@@ -60,6 +66,7 @@ if debug:
     logfile=open(os.path.join(debug_path,"gpsio-host_log.txt"),"w")
     logfile.write("GPSIO Host invoked at "+time.strftime("%a %d %b %Y %H:%M:%S")+"\n")
     logfile.write("Python="+sys.version+"\n")
+    logfile.write("host version="+str(version)+"\n")
     logfile.write(".ini file="+iniFile+"\n")
     logfile.write("GPSBabel executable="+gpsbabel_exe+"\n")
     logfile.write("data transfer chunk size="+str(chunk_size)+"\n")
@@ -131,11 +138,19 @@ def Main():
     if debug:
         logfile.write("request="+type(request).__name__+":"+str(request)+"\n")
 
-    # hardcode until this selection can be added to the extension GUI (and the options dict)
-    removeNumberFromAssignmentNames=True
 
     # validate and parse the request
     rq = json.loads(request)
+
+    # get the filter options, if they exist
+    options={}
+    if "options" in rq:
+        options=rq["options"]
+
+    removeNumberFromAssignmentNames=True # default value
+    if 'removeNumbers' in options:
+        removeNumberFromAssignmentNames=options['removeNumbers'] # use value from options, if specified
+
     if "cmd" in rq:
         cmd=rq["cmd"]
         data=None
@@ -177,13 +192,8 @@ def Main():
         sys.exit()
 
     if cmd == "ping-host":
-        send_message({'cmd': 'ping-host', 'status': 'ok', 'version': 1})
+        send_message({'cmd': 'ping-host', 'status': 'ok', 'version': version})
         sys.exit()
-
-    # get the filter options, if they exist - used in the call to transfer_gmsm
-    options={}
-    if "options" in rq:
-        options=rq["options"]
         
     # differentiate by GPS brand and protocol
     if "target" in rq:

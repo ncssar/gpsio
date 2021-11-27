@@ -41,7 +41,8 @@ var fn = function(request, sender, sendResponse) {
         timeSel:'72',
         recentSel:'3',
         size:true,
-        sizeSel:'100kB'
+        sizeSel:'100kB',
+        removeNumbers:true
     }, function(items) {
         console.log("options retrieved:");
         console.log(items);
@@ -60,3 +61,7 @@ var fn = function(request, sender, sendResponse) {
 
 rt.onMessage.addListener(fn);
 
+// if update popup is needed (see popup.js), only show it once per browser session
+rt.onStartup.addListener(function() {
+	chrome.storage.local.set({'updatePopupShown':'false'});
+});
