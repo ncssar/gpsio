@@ -17,7 +17,7 @@ New version development workflow:
 
 4. unzip the .zip files
 
-5. sideload the unzipped chrome dir
+5. in Manage Extensions, use Load Unpacked to load the unzipped chrome dir
 
 6. make sure the host manifest.json allows the sideloaded id
 
@@ -29,10 +29,16 @@ New version development workflow:
 
 9. rebuild
 
-10. unzip and sideload fresh, in all browsers, to confirm behavior
+10. unzip and temporarily load the extension, in all browsers, to confirm behavior
+    (in Firefox, this is not the same as 'Load extension from file' - go to
+     about:debugging#/runtime/this-firefox and select 'Load Temporary Add-on...';
+     select the .zip file)
 
-11. commit and push a new host version with matching version#, even if no
-     functional changes were made to the host
+11. delete the unzipped directories (above) so they don't get committed to github, then
+     commit all the updates, always including a new host version with matching version#,
+     even if no functional changes were made to the host - since users will see a host
+     update notice after the extension is updated since the version numbers are different
+     until the host is updated
 
 12. when ready to publish, send new .zip files to various web stores
 files ready to be sent to Chrome Web Store and AMO (addons.mozilla.org).

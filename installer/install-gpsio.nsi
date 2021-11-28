@@ -75,7 +75,7 @@ ShowInstDetails show
 Section "Chrome Extension"
     DetailPrint "  1a. Chrome Extension : installing..."
     Sleep 1000
-    ExecDos::exec /TOSTACK "${py} -min 1a"
+    ExecDos::exec /TOSTACK "${py} 1a"
     Pop $0 ; status
     Pop $1 ; stdout
     ${DetailUpdate} "$1"
@@ -84,7 +84,7 @@ SectionEnd
 Section "Firefox Extension"
     DetailPrint "  1b. Firefox Extension : installing..."
     Sleep 1000
-    ExecDos::exec /TOSTACK "${py} -min 1b"
+    ExecDos::exec /TOSTACK "${py} 1b"
     Pop $0 ; status
     Pop $1 ; stdout
     ${DetailUpdate} "$1"
@@ -93,7 +93,7 @@ SectionEnd
 Section "Edge Extension"
     DetailPrint "  1c. Edge Extension : installing..."
     Sleep 1000
-    ExecDos::exec /TOSTACK "${py} -min 1c"
+    ExecDos::exec /TOSTACK "${py} 1c"
     Pop $0 ; status
     Pop $1 ; stdout
     ${DetailUpdate} "$1"
@@ -102,7 +102,7 @@ SectionEnd
 Section "GPSBabel"
     DetailPrint "2. GPSBabel : installing..."
     Sleep 1000
-    ExecDos::exec /TOSTACK "${py} -min 2"
+    ExecDos::exec /TOSTACK "${py} 2"
     Pop $0 ; status
     Pop $1 ; stdout
     ${DetailUpdate} "$1"
@@ -111,7 +111,7 @@ SectionEnd
 Section "Garmin USB Drivers"
     DetailPrint "3. Garmin USB Drivers : installing..."
     Sleep 1000
-    ExecDos::exec /TOSTACK "${py} -min 3"
+    ExecDos::exec /TOSTACK "${py} 3"
     Pop $0 ; status
     Pop $1 ; stdout
     ${DetailUpdate} "$1"
@@ -120,7 +120,7 @@ SectionEnd
 Section "Native Host"
     DetailPrint "4. Native Host : installing..."
     Sleep 1000
-    ExecDos::exec /TOSTACK "${py} -min 4"
+    ExecDos::exec /TOSTACK "${py} 4"
     Pop $0 ; status
     Pop $1 ; stdout
     ${DetailUpdate} "$1"

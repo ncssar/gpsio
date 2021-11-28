@@ -34,8 +34,7 @@ import glob
 import time
 from datetime import datetime
 import filecmp
-
-from gpsio.installer.install import MANIFEST_INSTALL_LOCATION_CHROME
+import stat
 
 win32=sys.platform=='win32'
 darwin=sys.platform=='darwin'
@@ -46,13 +45,13 @@ linux=sys.platform=='linux'
 # see https://stackoverflow.com/a/67437837/3577105
 #  specifying a relative path fails with 'the parameter is incorrect'
 
+# don't import oschmod for darwin/linux - os.chmod should work fine
 pwd=os.path.dirname(os.path.realpath(__file__))
 if win32:
     os.add_dll_directory(os.path.join(pwd,'host','dist','pywin32_system32'))
     import oschmod
 
 parser=argparse.ArgumentParser()
-# parser.add_argument('-min',action='store_true')
 parser.add_argument('stages',type=str,nargs='+')
 args=parser.parse_args()
 
@@ -379,6 +378,8 @@ def stage_4():
         if win32:
             for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
                 oschmod.set_mode(f,'a+w')
+        if darwin|linux:
+            os.chmod(os.path.join(HOST_DIR,'gpsio-host.py'),stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH) # 755
     else:
         print('4. Native Host : FAILED')
         ltxt+='\n\nNATIVE HOST INSTALLATION FAILED - the temporary installation directory, which should contain the necessary extracted files, does not exist.'
@@ -392,18 +393,19 @@ def stage_4():
     # https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests#manifest_location
     # https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/developer-guide/native-messaging?tabs=macos#step-3---copy-the-native-messaging-host-manifest-file-to-your-system
 
-    HOST_DIR_WRITE=HOST_DIR
-    host_file='gpsio-host.py'
+    host_path=os.path.join(HOST_DIR,'gpsio-host')
     if win32:
-        HOST_DIR_WRITE=HOST_DIR.replace('\\','\\\\')
-        host_file='gpsio-host.bat'
+        host_path=host_path.replace('\\','\\\\')
+        host_path+='.bat'
+    if darwin|linux:
+        host_path+='.py'
 
     with open(HOST_MANIFEST_FILE['chrome'],'w') as f:
-        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_WRITE+'/'+host_file+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+CHROME_EXTENSION_ID+'/"\n  ]\n}')
+        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+host_path+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+CHROME_EXTENSION_ID+'/"\n  ]\n}')
     with open(HOST_MANIFEST_FILE['firefox'],'w') as f:
-        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_WRITE+'/'+host_file+'",\n  "type": "stdio",\n  "allowed_extensions": [\n    '+FIREFOX_EXTENSION_ID+'"\n  ]\n}')
+        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+host_path+'",\n  "type": "stdio",\n  "allowed_extensions": [\n    "'+FIREFOX_EXTENSION_ID+'"\n  ]\n}')
     with open(HOST_MANIFEST_FILE['edge'],'w') as f:
-        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+HOST_DIR_WRITE+'/'+host_file+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+EDGE_EXTENSION_ID+'/"\n  ]\n}')
+        f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+host_path+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+EDGE_EXTENSION_ID+'/"\n  ]\n}')
 
     # 4c. Windows: write registry entries for host manifest file locations
     if win32:
