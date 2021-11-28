@@ -8,6 +8,9 @@ GPSIO is a replacement for the Garmin Communicator plugin, built on open web sta
 
 Supported browsers are Chrome, Firefox, and Edge. Supported OSs are Mac, Windows and (soon) Linux, though currently there is only a Windows installer.  The Mac installer is in progress; until it is available, you will need to follow the 'Manual Installation' procedure below.
 
+## Updating the Host
+Did the extension tell you that a new version of the host is available?  For now, updating the host involves copying the latest version of gpsio-host.py (in the 'host' directory above) to your computer.  Soon, a host-only updater program will be available.
+
 ## Using GPSIO
 The only part of GPSIO that the user normally sees is the transfer method selection after clicking Export or Import in CalTopo / SARTopo / CalTopo-Desktop.  The user can also click the extension icon, at the top right of the web browser, to show and modify the GPSIO data filter settings.  See below for more details.
 
@@ -30,11 +33,11 @@ GPSBabel is a free open-source program for working with GPSs and GPS data (consi
 The latest Garmin USB drivers are available [here](https://www8.garmin.com/support/download_details.jsp?id=591). For USB-mode devices (Garmin 60 or similar non-mass-storage-mode devices), you can run Windows Device Manager to verify the driver installation: if the drivers are installed properly, a plugged-in Garmin USB-mode device will show up in a category named "Garmin Devices"; if the drivers are not installed, a plugged-in Garmin USB-mode device will show up as "Unknown USB Device", causing CalTopo GPSIO transfers to abort with a red line of text indicating that no GPS was found. (Mass-storage-mode devices such as Garmin 62, 64, etc. will instead show up under 'Drives' and/or 'Portable Devices'.)
 
 ### 4. Install the native host application
-(In previous versions, Python had to be installed on your computer.  Starting in November 2021, Python installation is no longer needed, since the compact embeddable Python core is part of the GPSIO installation.)
+The host uses Python 3.  On Mac and Linux computers, Python 3 should already be installed.  On Windows, previous versions of the host required you to install Python separately, but the current versions do not, since the compact embeddable Python core is part of the GPSIO installation.
 
-In Windows, the host is a batch file (gpsio-host.bat) that invokes a python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the host directory above.
+In Windows, the host is a batch file (gpsio-host.bat) that invokes a Python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the host directory above.
 
-You will also need to tell the browser extensions where the actual native host files are located on your computer.  The GPSIO installer will take care of this for you.  If you need to do this step by hand, the methods for doing this are documented in the various browser development documents, and are different for Windows vs. Mac.  While the installers are under construction, please contact the developer if you need help setting this up.
+The browser extensions need to know where the actual native host files are located on your computer.  The GPSIO installer will take care of this for you.  If you need to do this step by hand, the methods for doing this are documented in the various browser development documents, and are different for Windows vs. Mac.  While the installers are under construction, please contact the developer if you need help setting this up.
 
 
 ## Extensions - Installation Follow-up and Details
