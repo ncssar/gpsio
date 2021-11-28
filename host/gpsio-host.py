@@ -84,28 +84,24 @@ if not os.path.isfile(gpsbabel_exe):
         logfile.write("ERROR: specified gpsbabel_exe "+gpsbabel_exe+" is not a file.  Exiting.\n")
     sys.exit()
 
-# reopen stdout and stdin in bytes mode
+# reopen stdout and stdin in bytes mode for all platforms
+try:
+    # required to avoid crazy surrogate encoding errors on mac
+    # w+b causes errorson mac; wb works as excpected on windows and mac
+    sys.stdout=os.fdopen(sys.stdout.fileno(),'wb')
+except Exception as e:
+    logfile.write('stdout reopen error:'+str(e)+'\n')
+try:
+    sys.stdin=os.fdopen(sys.stdin.fileno(),'rb',0)
+except Exception as e:
+    logfile.write('stdin reopen error:'+str(e)+'\n')
 
-if darwin:
-    try:
-        # required to avoid crazy surrogate encoding errors on mac
-        # w+b causes errors; wb works as excpected
-        sys.stdout=os.fdopen(sys.stdout.fileno(),'wb')
-    except Exception as e:
-        logfile.write('stdout reopen error:'+str(e)+'\n')
-    try:
-        sys.stdin=os.fdopen(sys.stdin.fileno(),'rb',0)
-    except Exception as e:
-        logfile.write('stdin reopen error:'+str(e)+'\n')
-
-# On Windows, the default I/O mode is O_TEXT. Set this to O_BINARY
+# Also, on Windows, the default I/O mode is O_TEXT. Set this to O_BINARY
 # to avoid unwanted modifications of the input/output streams.
 
 if win32:
     import msvcrt
     try:
-        sys.stdout=os.fdopen(sys.stdout.fileno(), 'w+b')
-        sys.stdin=os.fdopen(sys.stdin.fileno(), 'rb', 0)
         msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
         msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     except Exception as e:
