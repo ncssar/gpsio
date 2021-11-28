@@ -81,25 +81,17 @@ GPSIO requires multiple parts to all be working together.  See the installation 
 3. MTP - Some newer Garmin devices (Alpha 200i) use Media Transfer Protocol (MTP).  This is the same protocol used by most smartphones to transfer files, especially images and music.  Windows will mount your MTP device as another entry in the file browser, but without a drive letter.  MTP is not yet supported in GPSIO.  So, you will have to export to file and import from file.  Adding MTP support to GPSIO is high on the priority list but there is no expected ETA.  Take a look [here](https://github.com/ncssar/gpsio/issues/12) and please contribute if you can.  (Also check [here](https://github.com/ncssar/gpsio/issues/10#issuecomment-817205961) regarding the Alpha 200i MTP vs GMSM.)
 
 # Usage
-Importing to and Exporting from CalTopo/SARTopo using GPSIO is basically the same as Importing and Exporting with any file type.  Just make sure to select GPSIO, rather than a file type, after selecting Import or Export.
+Whether importing or exporting, start by connecting the GPS to the computer with a USB cable.
 
-## Importing GPS Tracks and Waypoints as Lines and Markers using GPSIO
-1. Connect the GPS to the computer with a USB cable. It may take the GPS a minute or two to save the tracks and establish a connection.
-  - wait for the computer to indicate that it recognizes the device; if you proceed to the next step too soon, you will get a red error, in which case you can just try again after the device is recognized.
-2. On the CalTopo top menu bar, click "Import" and "Connect via GPSIO".
-3. A message will appear while the GPS is being read.
-4. If the connection is unsuccessful, you may see an error message. The extension may not be correctly installed, or you may have not given the GPS long enough to connect.
-5. A second message will appear once the data has been read and is being processed.
-6. Un-check any waypoints or tracks you do not want to import and click "Import".
-7. Track will appear in the "Lines & Polygons" folder, waypoints will appear in the "Markers" folder.
+For GMSM models (Garmin 62 and newer), the device is not ready until the computer recognizes and mounts it as an external drive.  On Windows, the computer will play a sound when the GPS is mounted and ready for transfer.  If you proceed to the next step too soon, you will get a red error message, in which case you can just leave the GPS plugged in, and try to import or export again after the GPS is recognized.  Note: this delay also happens even if you do not use GPSIO - it's the case whenever you plug a GMSM model into the computer.
 
-## Exporting Lines, Polygons and Markers to GPS Units using GPSIO
-1. Connect the GPS to the computer with a USB cable. It may take the GPS a minute or two to save the tracks and establish a connection.
-2. On the CalTopo top menu bar, click "Export" and "Connect via GPSIO".
-3. Un-check any objects you do not want to import and click "Export".
-4. Once the export is complete, you will see this message:
-5. If the connection is unsuccessful, you may see an error message. The extension may not be correctly installed, or you may have not given the GPS long enough to connect.
+It may take the GPS a while to save its tracks and other data, before it can establish a connection to the computer.  The more data on the GPS, the longer this part will take - a good reason to encourage GPS users to keep a clean GPS.  You can often speed up this 'boot' process by turning on the GPS a few minutes before plugging it in.
 
+Garmin Serial Protocol models don't need to mount as a drive, so they are ready for transfer immediately.
+
+After the GPS is ready for transfer, Importing to and Exporting from CalTopo/SARTopo using GPSIO is basically the same as Importing and Exporting with any file type.  Just make sure to select GPSIO, rather than a file type, after selecting Import or Export.
+
+Once the transfer is complete, you can unplug the GPS from the computer.  Technically, as with any external drive, you 'should' dismount or 'eject' it from Windows before actually unplugging it, but we have never noticed any issues that could be traced back to failure-to-eject-before-unplug, after thousands of GPSIO transfers during search operations.
 
 ## Contributing
 GPSIO is free software (GPL) and is hosted at https://github.com/ncssar/gpsio. Contributions are welcome; two high priority items are Linux installation support and integration with non-Garmin GPSs (either through auto-detection or a user-selectable GPS type dropdown). Testing with additional GPS units is also valuable; send bug reports to the developer.
@@ -108,10 +100,11 @@ GPSIO is free software (GPL) and is hosted at https://github.com/ncssar/gpsio. C
 You tried to install GPSIO but it's not working... what now?  Troubleshooting GPSIO is tricky because it has multiple parts.  Here are some troubleshooting guidelines:
 1. Do you see the GPSIO extension icon (a very small globe with two red arrows) at the top right of your browser window, alongside any other extension icons?
     - YES: go to the next step
-    - NO: the browser extension hasn't been installed; see the installation steps above.  If that doesn't solve it, contact the developer with these details.
-2. Left-click the GPSIO extension icon.  A small popup box should appear near the extension icon.  Does it have a red line of text that says 'Cannot communicate with host', or, a green line of text that says 'Plugin working properly' with a selection of filter options?
+    - NO: the browser extension hasn't been installed and/or enabled (and/or 'pinned' for Chrome); see the installation steps above.  If that doesn't solve it, contact the developer with these details.
+2. Left-click the GPSIO extension icon.  A small popup box should appear near the extension icon.  Does it have a red line of text that says 'Cannot communicate with host', or, a green line of text that says 'Plugin working properly', or a blue line that says 'OK for now', with a selection of filter options?
     - RED: left-click 'check again' once or twice.  If the red line doesn't go away, go to the next step.
     - GREEN: contact the developer with exact details of the error you're seeing.
+    - BLUE: follow the steps for GREEN; also, tell your local tech support that it's time to update the GPSIO host.
 3. Open a command terminal, go to the default gpsio installation directory (normally, the 'gpsio' directory under your user home directory), and run gpsio-host.py using python.  Any error messages in the first part of gpsio-host.py will show up here, but most of the code relies on being run through the browser so won't be tested by running it from the command line.
 4. If you see 'Reading data from GPS . . .' followed by a bold red line 'GPS Exception: Unexpected disconnect' when you try to import using GPSIO, check the GPSIO log file (normally gpsio-host_log.txt in your home directory).  This indicates that gpsio-host.py encountered an error, which will hopefully show up in the log file.
 
