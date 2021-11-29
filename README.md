@@ -48,6 +48,8 @@ If you have the old version of the GPSIO extension installed, you will want to r
 
 The installer ***attempts*** to add the latest GPSIO extension to your web browsers.  Even if the attempt worked, there are a few reasons you may not see the new extension right away.  If you determine that the extension was not added by the installer, see [the links above](https://github.com/ncssar/gpsio/blob/master/README.md#1-install-the-gpsio-web-browser-extension) to add the extension to your browser directly.
 
+On Mac and Linux, you may not even see an entry for gpsio in the Manage Extensions page, until you restart your web browser.
+
 If the extension is added successfully by the installer, ***you may still need to enable it.***  You only need to enable it once (for each browser that you use), but you might or might not be prompted to do so.  Enabling the extension cannot be done automatically by the installer, for security reasons.  As an example, here's what enabling the extension looks like in Chrome:
 
 ![Enable extension in Chrome](img/chrome_enable_gpsio.gif)
