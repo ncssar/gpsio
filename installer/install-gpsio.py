@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 
 # TODO: Mac
 # TODO: Linux
@@ -40,12 +41,16 @@ win32=sys.platform=='win32'
 darwin=sys.platform=='darwin'
 linux=sys.platform=='linux'
 
+if darwin|linux:
+    if not os.geteuid() == 0:
+        sys.exit('ERROR: gpsio-init.py must be run as root.')
+
 # For python 3.8 or later on Windows, this line is required before 'import oschmod',
 #  to avoid 'ImportError: DLL load failed while importing win32security: ...'
 # see https://stackoverflow.com/a/67437837/3577105
 #  specifying a relative path fails with 'the parameter is incorrect'
 
-# don't import oschmod for darwin/linux - os.chmod should work fine
+# don't import oschmod for darwin/linux, since it isn't built in - os.chmod should work fine
 pwd=os.path.dirname(os.path.realpath(__file__))
 if win32:
     os.add_dll_directory(os.path.join(pwd,'host','dist','pywin32_system32'))
@@ -95,8 +100,12 @@ if win32:
 
 elif darwin:
     HOST_DIR='/Library/'+EXTENSION_HANDLE
+    CHROME_EXTENSIONS_FOLDER='~/Library/Application Support/Google/Chrome/Default/Extensions'
+    EDGE_EXTENSIONS_FOLDER='~/Library/Application Support/Microsoft/Edges/Default/Extensions'
+    CHROME_INSTALL_JSON='/Library/Application Support/Google/Chrome/External Extensions/'+CHROME_EXTENSION_ID+'.json'
+    EDGE_INSTALL_JSON='/Library/Application Support/Microsoft/Edge/External Extensions/'+EDGE_EXTENSION_ID+'.json'
     HOST_MANIFEST_FILE={
-        'chrome':'/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.caltopo.gpsio.json',
+        'chrome':'/Library/Google/Chrome/NativeMessagingHosts/com.caltopo.gpsio.json',
         'firefox':'/Library/Application Support/Mozilla/NativeMessagingHosts/com.caltopo.gpsio.json',
         'edge':'/Library/Microsoft/Edge/NativeMessagingHosts/com.caltopo.gpsio.json'}
 
@@ -136,15 +145,48 @@ def findRegKeyWithEntry(keyName,entryName,entryValue):
                 if val[0]==entryValue:
                     return subkeyName
     return None
-                    
 
-# platform dependent common code
+def getDarwinApps():    
+    return str(subprocess.run(['mdfind',"kMDItemKind == 'Application'"],capture_output=True).stdout,'utf-8').split('\n')
+             
+# findGPSBabel - returns a two-element list: [installed,exe]
+#    installed - boolean indicating whether it was apparently previously installed
+#    exe - full verified path to the executable, or None if not found
+def findGPSBabel():
+    if win32:
+        subkeyName=findRegKeyWithEntry(UNINSTALL_WOW_ROOT,'DisplayName','GPSBabel 1.7.0')
+        if subkeyName: # key found: read the install path value and make sure gpsbabel.exe is there
+            keyName=UNINSTALL_WOW_ROOT+'\\'+subkeyName
+            key=winreg.OpenKey(HKLM,keyName)
+            loc=winreg.QueryValueEx(key,'InstallLocation')[0]
+            gpsbabel_exe=os.path.join(loc,'gpsbabel.exe')
+            if os.path.isfile(gpsbabel_exe):
+                return [True,gpsbabel_exe]
+            else:
+                return [True,None] # apparently installed, but referenced executable not found
+        else:
+            return [False,None] # apparently not installed
+    elif darwin:
+        apps=getDarwinApps()
+        gpsbabel_appdir=None
+        gpsbabel_appentries=[x for x in apps if 'GPSBabel' in x]
+        if gpsbabel_appentries:
+            gpsbabel_appdir=gpsbabel_appentries[0]
+        if gpsbabel_appdir:
+            gpsbabel_exe=os.path.join(gpsbabel_appdir,'Contents','MacOS','gpsbabel')
+            if os.path.isfile(gpsbabel_exe):
+                return [True,gpsbabel_exe]
+            else:
+                return [True,None] # apparently installed, but referenced executable not found
+        else:
+            return [False,None] # apparently not installed
+
+# platform dependent top-level code
 if win32:
     import winreg
     HKLM=winreg.HKEY_LOCAL_MACHINE
     HKCU=winreg.HKEY_CURRENT_USER
-elif darwin:
-    darwinApps=str(subprocess.run(['mdfind',"kMDItemKind == 'Application'"],capture_output=True).stdout).split('\\n')
+
 
 # 1. attempt to install browser extensions
 # the chrome and edge docs imply that this is an 'externally installed' extension, i.e.
@@ -203,6 +245,14 @@ def stage_1a():
                 print('  1a. Chrome Extension : installation attempted')
                 # ltxt+='\n\nCHROME EXTENSION installation has been triggered; on or before the next time you start Chrome, you to enable the gpsio extension.  Make sure to enable the extension.'
             winreg.CloseKey(key)
+        elif darwin:
+            # add json file - this doesn't take effect til Chrome restart, and it is silent and not enabled by default,
+            #  so the user will probably add the extension by hand instead; but we may as well try
+            os.makedirs(os.path.dirname(CHROME_INSTALL_JSON),exist_ok=True)
+            with open(CHROME_INSTALL_JSON,'w') as f:
+                f.write('{\n  "external_update_url":"'+CHROME_UPDATE_URL+'"\n}')
+                print('  1a. Chrome Extension : installation attempted')
+
 
 # 1b. attempt to install Firefox extension
 def stage_1b():
@@ -283,63 +333,64 @@ def stage_1c():
                 print('  1c. Edge Extension : installation attempted')
                 # ltxt+="\n\nEDGE EXTENSION installation has been triggered; on or before the next time you start Edge, it should prompt you to enable the gpsio extension.  Make sure to enable the extension."
             winreg.CloseKey(key)
+        elif darwin:
+            # add json file - this doesn't take effect til Edge restart, and it is silent and not enabled by default,
+            #  so the user will probably add the extension by hand instead; but we may as well try
+            os.makedirs(os.path.dirname(EDGE_INSTALL_JSON),exist_ok=True)
+            with open(EDGE_INSTALL_JSON,'w') as f:
+                f.write('{\n  "external_update_url":"'+EDGE_UPDATE_URL+'"\n}')
+                print('  1c. Edge Extension : installation attempted')
 
 # 2. attempt to install GPSBabel
 def stage_2():
     global ltxt
-    if win32:
-        subkeyName=findRegKeyWithEntry(UNINSTALL_WOW_ROOT,'DisplayName','GPSBabel 1.7.0')
-        if subkeyName: # key found: read the install path value and make sure gpsbabel.exe is there
-            # print('matching key: '+str(subkeyName))
-            keyName=UNINSTALL_WOW_ROOT+'\\'+subkeyName
-            # print('full key name: '+keyName)
-            key=winreg.OpenKey(HKLM,keyName)
-            loc=winreg.QueryValueEx(key,'InstallLocation')[0]
-            global gpsbabel_exe
-            gpsbabel_exe=os.path.join(loc,'gpsbabel.exe')
-            if os.path.isfile(gpsbabel_exe):
-                print('2. GPSBabel : previous installation verified')
+    global gpsbabel_exe
+    g=findGPSBabel()
+    if g[0]: # previously installed
+        if g[1]: # executable verified
+            gpsbabel_exe=g[1]
+            print('2. GPSBabel : previous installation verified')
+            return
+        else: # apparently previously installed, but executable not found
+            print('2. GPSBabel : FAILED')
+            ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nA previous installation was detected, but the executable file it refers to could not be found.  Please uninstall GPSBabel, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
+            return
+    else: # not previously installed - install now
+        if win32:
+            e=os.path.join(INSTALL_TMP,'GPSBabel-1.7.0-Setup.exe')
+            if os.path.isfile(e):
+                subprocess.run([e])
             else:
                 print('2. GPSBabel : FAILED')
-                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nA previous installation was detected from the registry, but the executable file it refers to could not be found.  Please uninstall GPSBabel from Windows, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
-        else:
-            subprocess.run([os.path.join(INSTALL_TMP,'GPSBabel-1.7.0-Setup.exe')])
-            # check again: duplicated / repeated code from above - not a big problem
-            subkeyName=findRegKeyWithEntry(UNINSTALL_WOW_ROOT,'DisplayName','GPSBabel 1.7.0')
-            if subkeyName: # key found: read the install path value and make sure gpsbabel.exe is there
-                # print('matching key: '+str(subkeyName))
-                keyName=UNINSTALL_WOW_ROOT+'\\'+subkeyName
-                # print('full key name: '+keyName)
-                key=winreg.OpenKey(HKLM,keyName)
-                loc=winreg.QueryValueEx(key,'InstallLocation')[0]
-                gpsbabel_exe=os.path.join(loc,'gpsbabel.exe')
-                if os.path.isfile(gpsbabel_exe):
-                    print('2. GPSBabel : installed and verified')
-                else:
-                    print('2. GPSBabel : FAILED')
-                    ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The registry key was found, but the executable file it refers to was not.  Please uninstall GPSBabel from Windows, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
+                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe required installer GPSBabel-1.7.0-Setup.exe is not part of the installation bundle.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
+                return
+        elif darwin:
+            e='GPSBabel-1.7.0.dmg'
+            if os.path.isfile(e):
+                subprocess.run(['hdiutil','attach','-mountpoint','./mount','GPSBabel-1.7.0.dmg'])
+                try:
+                    shutil.copytree('mount/GPSBabelFE.app','/Applications/GPSBabelFE.app')
+                except:
+                    pass
+                subprocess.run(['hdiutil','detach','./mount'])
             else:
                 print('2. GPSBabel : FAILED')
-                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The registry key was not found.  Please uninstall GPSBabel from Windows, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
-    elif darwin:
-        gpsbabel_appdir=[x for x in darwinApps if 'GPSBabel' in x][0]
-        if gpsbabel_appdir:
-            gpsbabel_exe=os.path.join(gpsbabel_appdir,'Contents','MacOS','gpsbabel')
-            if os.path.isfile(gpsbabel_exe):
-                print('2. GPSBabel: previous installation verified')
-            else:
-                print('2. GPSBabel : FAILED')
-                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe GPSBabel install directory was found, but the executable was not.'
-        else:
-            print('2. GPSBabel: installing...')
-            subprocess.run(['hdiutil','attach','-mountpoint','./mount','GPSBabel-1.7.0.dmg'])
-            try:
-                shutil.copytree('mount/GPSBabelFE.app','/Applications/GPSBabelFE.app')
-            except:
-                pass
-            subprocess.run(['hdiutil','detach','./mount'])
-            print('2. GPSBabel: installed')
-            
+                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe required installer '+e+' is not part of the installation bundle.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
+                return
+
+    # check again
+    time.sleep(3)
+    g=findGPSBabel()
+    if g[0]: # installed
+        if g[1]: # executable verified
+            gpsbabel_exe=g[1]
+            print('2. GPSBabel : installed and verified')
+        else: # installed but executable was not found
+            print('2. GPSBabel : FAILED')
+            ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The executable file refered to by the fresh installation was not found.  Please uninstall GPSBabel, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
+    else: # fresh install failed
+        print('2. GPSBabel : FAILED')
+        ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation attempt apparently did not work.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'          
 
 # 3. attempt to install Garmin USB drivers (Windows only)
 def stage_3():
@@ -356,7 +407,8 @@ def stage_3():
             else:
                 print('3. Garmin USB Drivers : FAILED')
                 ltxt+='\n\nGARMIN USB DRIVERS INSTALLATION FAILED - the Garmin USB Driver installation program was not found in the GPSIO installation temporary directory.'
-
+    else:
+        print('3. Garmin USB Drivers : skipping (only needed for Windows)')
 
 # 4. attempt to install native host
 def stage_4():
@@ -400,6 +452,10 @@ def stage_4():
     if darwin|linux:
         host_path+='.py'
 
+    # create directories for host manifests, if needed
+    for f in HOST_MANIFEST_FILE.values():
+        os.makedirs(os.path.dirname(f),exist_ok=True)
+
     with open(HOST_MANIFEST_FILE['chrome'],'w') as f:
         f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+host_path+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+CHROME_EXTENSION_ID+'/"\n  ]\n}')
     with open(HOST_MANIFEST_FILE['firefox'],'w') as f:
@@ -414,11 +470,14 @@ def stage_4():
         winreg.SetValueEx(winreg.CreateKey(HKCU,EDGE_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'edge-manifest.json'))
     
     # 4d. edit gpsio-host.ini with confirmed gpsbabel executable path
-    if gpsbabel_exe:
-        with open('gpsio-host.ini','r') as f:
+    #  (this depends on stage 2 having run in the same session!)
+    g=findGPSBabel()
+    if g[0] and g[1]:
+        gpsbabel_exe=g[1]
+        with open(os.path.join(HOST_DIR,'gpsio-host.ini'),'r') as f:
             fdata=f.read()
         fdata=fdata.replace('UNDEFINED',gpsbabel_exe)
-        with open('gpsio-host.ini','w') as f:
+        with open(os.path.join(HOST_DIR,'gpsio-host.ini'),'w') as f:
             f.write(fdata)
 
     # 4e. delete unused modules from host dist        
@@ -428,13 +487,23 @@ def stage_4():
         shutil.rmtree(os.path.join(HOST_DIR,'dist','oschmod'),ignore_errors=True)
         
     print('4. Native Host : installed')
-    ltxt+='\n\nNative host installed at '+HOST_DIR
+    ltxt+='\n\nNative host installed at '+HOST_DIR+'\n'
 
 
 ####################################################################
 # top level code: run the requested functions, in alphabetical order
 ####################################################################
-args.stages.sort()                
+args.stages.sort()
+
+if any(item in args.stages for item in ['1a','1b','1c']):
+    print('1. Browser Extension(s):')
+
+# if multiple stages are being done, delete the log file first
+if len(args.stages)>1:
+    try:
+        os.remove(os.path.join(INSTALL_TMP,'install-notices.txt'))
+    except:
+        pass
 for stage in args.stages:
     funcName='stage_'+stage
     globals()[funcName]()
