@@ -41,6 +41,12 @@ win32=sys.platform=='win32'
 darwin=sys.platform=='darwin'
 linux=sys.platform=='linux'
 
+def log(t):
+    print(t)
+    if darwin:
+        with open(os.path.join(HOST_DIR,'install-log.txt'),'a') as f:
+            f.write(t+'\n')
+
 if darwin|linux:
     if not os.geteuid() == 0:
         sys.exit('ERROR: gpsio-init.py must be run as root.')
@@ -56,15 +62,19 @@ if win32:
     os.add_dll_directory(os.path.join(pwd,'host','dist','pywin32_system32'))
     import oschmod
 
-parser=argparse.ArgumentParser()
-parser.add_argument('stages',type=str,nargs='+')
-args=parser.parse_args()
+# for Windows, this is called from NSIS, and there will be one argument: stage to run
+# for Mac, this is called from installer, and the arguments will be predetermined by pkgbuild
+if win32:
+    parser=argparse.ArgumentParser()
+    parser.add_argument('stages',type=str,nargs='+')
+    args=parser.parse_args()
+elif darwin:
+    stages=['1a','1b','1c','2','3','4']
 
 gpsbabel_exe=False
 ltxt=''
 
 # platform independent constants
-INSTALL_TMP=pwd # normally, the current directory is the unzipped tmp directory
 CHROME_EXTENSION_ID='cbpembjdolhcjepjgdkcflipfojbjall' # published on Chrome Web Store
 FIREFOX_EXTENSION_ID='{5da30c55-01fd-4045-a0d2-41c47ebc8b83}' # published on AMO (addons.mozilla.org)
 EDGE_EXTENSION_ID='gnonahdiojppiacfbalpgjddpkfepihk' # published on Edge Add-ons
@@ -78,6 +88,7 @@ if win32:
     PF='C:\\Program Files'
     PF86=PF+' (x86)'
     HOST_DIR=PF86+'\\GPSIO'
+    INSTALL_TMP=pwd # normally, the current directory is the unzipped tmp directory
     CHROME_EXTENSIONS_FOLDER=os.getenv('LOCALAPPDATA')+'\\Google\\Chrome\\User Data\\Default\\Extensions'
     FIREFOX_PROFILES_FOLDER=os.getenv('APPDATA')+'\\Mozilla\\Firefox\\Profiles'
     EDGE_EXTENSIONS_FOLDER=os.getenv('LOCALAPPDATA')+'\\Microsoft\\Edge\\User Data\\Default\\Extensions'
@@ -99,7 +110,13 @@ if win32:
         'edge':os.path.join(HOST_DIR,'edge-manifest.json')}
 
 elif darwin:
-    HOST_DIR='/Library/'+EXTENSION_HANDLE
+    # # when called from installer (from package generated with pkgbuild), argv[2] is the installer target dir
+    # if len(sys.argv)>2 and os.path.isdir(sys.argv[2]):
+    #     HOST_DIR=sys.argv[2]
+    # else:
+    #     HOST_DIR='/Library/'+EXTENSION_HANDLE
+    HOST_DIR='/Library/gpsio'
+    INSTALL_TMP=HOST_DIR
     CHROME_EXTENSIONS_FOLDER='~/Library/Application Support/Google/Chrome/Default/Extensions'
     EDGE_EXTENSIONS_FOLDER='~/Library/Application Support/Microsoft/Edges/Default/Extensions'
     CHROME_INSTALL_JSON='/Library/Application Support/Google/Chrome/External Extensions/'+CHROME_EXTENSION_ID+'.json'
@@ -117,9 +134,8 @@ elif linux:
         'edge':'/etc/opt/edge/native-messaging-hosts/com.caltopo.gpsio.json'}
 
 else:
-    print('unknown platform '+str(sys.platform))
+    log('unknown platform '+str(sys.platform))
     sys.exit(1)
-
 
 def findRegKeyWithEntry(keyName,entryName,entryValue):
     if 'WOW64' in keyName:
@@ -203,7 +219,7 @@ def stage_1a():
     global ltxt
     #  is the extension already installed?
     if os.path.isdir(os.path.join(CHROME_EXTENSIONS_FOLDER,CHROME_EXTENSION_ID)):
-        print('  1a. Chrome Extension : already installed')
+        log('  1a. Chrome Extension : already installed')
         return
     else:
         if win32: # add registry entry if needed
@@ -213,13 +229,13 @@ def stage_1a():
             try:
                 key=winreg.CreateKeyEx(HKLM,CHROME_REGISTRY_FULL_KEY,access=flags)
             except PermissionError:
-                print('Permission error: Chrome key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
+                log('Permission error: Chrome key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
                 return
             needToWrite=False
             try:
                 val=winreg.QueryValueEx(key,'update_url')
             except PermissionError:
-                print('Permission error: Chrome key value cannot be queried')
+                log('Permission error: Chrome key value cannot be queried')
                 return
             except: # value does not exist
                 needToWrite=True
@@ -235,14 +251,14 @@ def stage_1a():
                     winreg.DeleteValue(key,'update_url')
                     time.sleep(1)
                     needToWrite=True
-                    # print('  1a. Chrome Extension : FAILED')
+                    # log('  1a. Chrome Extension : FAILED')
                     # ltxt+='\n\nCHROME EXTENSION - INSTALLATION FAILED\nIf you use Chrome, you will need to add the extension to Chrome by hand (i.e. from Chrome).  You can search for \'gpsio\' at the Chrome Web Store.  The direct link is in the documentation at github.com/ncssar/gpsio.'
                     # return
                 else:
                     needToWrite=True
             if needToWrite:
                 winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,CHROME_UPDATE_URL)
-                print('  1a. Chrome Extension : installation attempted')
+                log('  1a. Chrome Extension : installation attempted')
                 # ltxt+='\n\nCHROME EXTENSION installation has been triggered; on or before the next time you start Chrome, you to enable the gpsio extension.  Make sure to enable the extension.'
             winreg.CloseKey(key)
         elif darwin:
@@ -251,7 +267,7 @@ def stage_1a():
             os.makedirs(os.path.dirname(CHROME_INSTALL_JSON),exist_ok=True)
             with open(CHROME_INSTALL_JSON,'w') as f:
                 f.write('{\n  "external_update_url":"'+CHROME_UPDATE_URL+'"\n}')
-                print('  1a. Chrome Extension : installation attempted')
+                log('  1a. Chrome Extension : installation attempted')
 
 
 # 1b. attempt to install Firefox extension
@@ -259,7 +275,7 @@ def stage_1b():
     global ltxt
     xpiSource=os.path.join(INSTALL_TMP,FIREFOX_EXTENSION_ID+'.xpi')
     if not os.path.isfile(xpiSource):
-        print('  1b. Firefox Extension : FAILED')
+        log('  1b. Firefox Extension : FAILED')
         ltxt+='\n\nFIREFOX EXTENSION installation failed; it appears the required .xpi file was not extracted with the GPSIO installer.  Please contact the developer.'
         return
     # since the current profile can't be determined from code, just install it to all profiles
@@ -275,15 +291,15 @@ def stage_1b():
                 installedCount+=1
                 shutil.copyfile(xpiSource,xpiTarget)
         if installedCount==0:
-            print('  1b. Firefox Extension: already installed for all profiles')
+            log('  1b. Firefox Extension: already installed for all profiles')
         else:
             suffix=''
             if installedCount>1:
                 suffix='s'
-            print('  1b. Firefox Extension: installed for '+str(installedCount)+' profile'+suffix)
+            log('  1b. Firefox Extension: installed for '+str(installedCount)+' profile'+suffix)
             ltxt+='\n\nFIREFOX EXTENSION installation has been triggered for '+str(installedCount)+' profile'+suffix+'; on or before the next time you start Firefox, it may prompt you to enable the gpsio extension.  Make sure to enable the extension.'
     else:
-        print('  1b. Firefox Extension : skipped')
+        log('  1b. Firefox Extension : skipped')
         ltxt+='\n\nFIREFOX EXTENSION installation was skipped; it appears you do not have Firefox installed, since its AppData folder does not exist.  You can re-run this installer to try again later, or add the extension by hand from Firefox.'
 
 # 1c. attempt to install Edge extension
@@ -291,7 +307,7 @@ def stage_1c():
     global ltxt
     #  is the extension already installed?
     if os.path.isdir(os.path.join(EDGE_EXTENSIONS_FOLDER,EDGE_EXTENSION_ID)):
-        print('  1c. Edge Extension : already installed')
+        log('  1c. Edge Extension : already installed')
         return
     else:
         if win32: # add registry entry if needed
@@ -301,16 +317,16 @@ def stage_1c():
             try:
                 key=winreg.CreateKeyEx(HKLM,EDGE_REGISTRY_FULL_KEY,access=flags)
             except PermissionError:
-                print('Permission error: Edge key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
+                log('Permission error: Edge key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
                 return
             except Exception as e:
-                print(e)
+                log(e)
                 return
             needToWrite=False
             try:
                 val=winreg.QueryValueEx(key,'update_url')
             except PermissionError:
-                print('Permission error: Edge key value cannot be queried')
+                log('Permission error: Edge key value cannot be queried')
                 return
             except: # value does not exist
                 needToWrite=True
@@ -330,7 +346,7 @@ def stage_1c():
                     needToWrite=True
             if needToWrite:
                 winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,EDGE_UPDATE_URL)
-                print('  1c. Edge Extension : installation attempted')
+                log('  1c. Edge Extension : installation attempted')
                 # ltxt+="\n\nEDGE EXTENSION installation has been triggered; on or before the next time you start Edge, it should prompt you to enable the gpsio extension.  Make sure to enable the extension."
             winreg.CloseKey(key)
         elif darwin:
@@ -339,7 +355,7 @@ def stage_1c():
             os.makedirs(os.path.dirname(EDGE_INSTALL_JSON),exist_ok=True)
             with open(EDGE_INSTALL_JSON,'w') as f:
                 f.write('{\n  "external_update_url":"'+EDGE_UPDATE_URL+'"\n}')
-                print('  1c. Edge Extension : installation attempted')
+                log('  1c. Edge Extension : installation attempted')
 
 # 2. attempt to install GPSBabel
 def stage_2():
@@ -349,10 +365,10 @@ def stage_2():
     if g[0]: # previously installed
         if g[1]: # executable verified
             gpsbabel_exe=g[1]
-            print('2. GPSBabel : previous installation verified')
+            log('2. GPSBabel : previous installation verified')
             return
         else: # apparently previously installed, but executable not found
-            print('2. GPSBabel : FAILED')
+            log('2. GPSBabel : FAILED')
             ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nA previous installation was detected, but the executable file it refers to could not be found.  Please uninstall GPSBabel, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
             return
     else: # not previously installed - install now
@@ -361,7 +377,7 @@ def stage_2():
             if os.path.isfile(e):
                 subprocess.run([e])
             else:
-                print('2. GPSBabel : FAILED')
+                log('2. GPSBabel : FAILED')
                 ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe required installer GPSBabel-1.7.0-Setup.exe is not part of the installation bundle.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
                 return
         elif darwin:
@@ -374,7 +390,7 @@ def stage_2():
                     pass
                 subprocess.run(['hdiutil','detach','./mount'])
             else:
-                print('2. GPSBabel : FAILED')
+                log('2. GPSBabel : FAILED')
                 ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe required installer '+e+' is not part of the installation bundle.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
                 return
 
@@ -384,12 +400,12 @@ def stage_2():
     if g[0]: # installed
         if g[1]: # executable verified
             gpsbabel_exe=g[1]
-            print('2. GPSBabel : installed and verified')
+            log('2. GPSBabel : installed and verified')
         else: # installed but executable was not found
-            print('2. GPSBabel : FAILED')
+            log('2. GPSBabel : FAILED')
             ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation could not be confirmed.  The executable file refered to by the fresh installation was not found.  Please uninstall GPSBabel, then re-install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
     else: # fresh install failed
-        print('2. GPSBabel : FAILED')
+        log('2. GPSBabel : FAILED')
         ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe fresh installation attempt apparently did not work.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'          
 
 # 3. attempt to install Garmin USB drivers (Windows only)
@@ -398,17 +414,17 @@ def stage_3():
     if win32:
         subkeyName=findRegKeyWithEntry(UNINSTALL_ROOT,'DisplayName','Garmin USB Drivers')
         if subkeyName:
-            print('3. Garmin USB Drivers : already installed')
+            log('3. Garmin USB Drivers : already installed')
         else:
             d=os.path.join(INSTALL_TMP,'USBDrivers_2312.exe')
             if os.path.isfile(d):
                 subprocess.run([d])
-                print('3. Garmin USB Drivers : installed')
+                log('3. Garmin USB Drivers : installed')
             else:
-                print('3. Garmin USB Drivers : FAILED')
+                log('3. Garmin USB Drivers : FAILED')
                 ltxt+='\n\nGARMIN USB DRIVERS INSTALLATION FAILED - the Garmin USB Driver installation program was not found in the GPSIO installation temporary directory.'
     else:
-        print('3. Garmin USB Drivers : skipping (only needed for Windows)')
+        log('3. Garmin USB Drivers : skipping (only needed for Windows)')
 
 # 4. attempt to install native host
 def stage_4():
@@ -433,7 +449,7 @@ def stage_4():
         if darwin|linux:
             os.chmod(os.path.join(HOST_DIR,'gpsio-host.py'),stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH) # 755
     else:
-        print('4. Native Host : FAILED')
+        log('4. Native Host : FAILED')
         ltxt+='\n\nNATIVE HOST INSTALLATION FAILED - the temporary installation directory, which should contain the necessary extracted files, does not exist.'
         return
 
@@ -486,29 +502,32 @@ def stage_4():
         shutil.rmtree(os.path.join(HOST_DIR,'dist','pywin32_system32'),ignore_errors=True)
         shutil.rmtree(os.path.join(HOST_DIR,'dist','oschmod'),ignore_errors=True)
         
-    print('4. Native Host : installed')
+    log('4. Native Host : installed')
     ltxt+='\n\nNative host installed at '+HOST_DIR+'\n'
 
 
 ####################################################################
 # top level code: run the requested functions, in alphabetical order
 ####################################################################
-args.stages.sort()
+stages.sort()
 
-if any(item in args.stages for item in ['1a','1b','1c']):
-    print('1. Browser Extension(s):')
+if any(item in stages for item in ['1a','1b','1c']):
+    log('1. Browser Extension(s) :')
 
 # if multiple stages are being done, delete the log file first
-if len(args.stages)>1:
+if len(stages)>1:
     try:
         os.remove(os.path.join(INSTALL_TMP,'install-notices.txt'))
+        os.remove(os.path.join(HOST_DIR,'install-log.txt'))
     except:
         pass
-for stage in args.stages:
+for stage in stages:
     funcName='stage_'+stage
     globals()[funcName]()
 
 if ltxt!='':
     with open(os.path.join(INSTALL_TMP,'install-notices.txt'),'a') as f:
         f.write(ltxt)
+
+exit(0) # required for mac pkgbuild
 

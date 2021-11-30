@@ -1,0 +1,3 @@
+/bin/cp -f install-gpsio.py scripts/postinstall
+pkgbuild --identifier gpsio.pkg --root pkgbuild_root --scripts scripts --install-location /Library/gpsio gpsio.pkg
+
