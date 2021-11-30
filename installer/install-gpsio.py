@@ -44,7 +44,7 @@ linux=sys.platform=='linux'
 def log(t):
     print(t)
     if darwin:
-        with open(os.path.join(HOST_DIR,'install-log.txt'),'a') as f:
+        with open(LOG_FILE,'a') as f:
             f.write(t+'\n')
 
 if darwin|linux:
@@ -115,8 +115,8 @@ elif darwin:
     #     HOST_DIR=sys.argv[2]
     # else:
     #     HOST_DIR='/Library/'+EXTENSION_HANDLE
-    HOST_DIR='/Library/gpsio'
-    INSTALL_TMP=HOST_DIR
+    HOST_DIR='/Library/GPSIO'
+    INSTALL_TMP='/Library/gpsio-install-tmp' # this should be the --install-location value of pkgbuild
     CHROME_EXTENSIONS_FOLDER='~/Library/Application Support/Google/Chrome/Default/Extensions'
     EDGE_EXTENSIONS_FOLDER='~/Library/Application Support/Microsoft/Edges/Default/Extensions'
     CHROME_INSTALL_JSON='/Library/Application Support/Google/Chrome/External Extensions/'+CHROME_EXTENSION_ID+'.json'
@@ -136,6 +136,9 @@ elif linux:
 else:
     log('unknown platform '+str(sys.platform))
     sys.exit(1)
+
+NOTICES_FILE=os.path.join(INSTALL_TMP,'install-notices.txt') # post-install message box in NSIS
+LOG_FILE=os.path.join(HOST_DIR,'install-log.txt')
 
 def findRegKeyWithEntry(keyName,entryName,entryValue):
     if 'WOW64' in keyName:
@@ -202,6 +205,8 @@ if win32:
     import winreg
     HKLM=winreg.HKEY_LOCAL_MACHINE
     HKCU=winreg.HKEY_CURRENT_USER
+if darwin|linux:
+    os.makedirs(HOST_DIR,exist_ok=True)
 
 
 # 1. attempt to install browser extensions
@@ -381,9 +386,9 @@ def stage_2():
                 ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe required installer GPSBabel-1.7.0-Setup.exe is not part of the installation bundle.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
                 return
         elif darwin:
-            e='GPSBabel-1.7.0.dmg'
+            e=os.path.join(INSTALL_TMP,'GPSBabel-1.7.0.dmg')
             if os.path.isfile(e):
-                subprocess.run(['hdiutil','attach','-mountpoint','./mount','GPSBabel-1.7.0.dmg'])
+                subprocess.run(['hdiutil','attach','-mountpoint','./mount',e])
                 try:
                     shutil.copytree('mount/GPSBabelFE.app','/Applications/GPSBabelFE.app')
                 except:
@@ -391,10 +396,10 @@ def stage_2():
                 subprocess.run(['hdiutil','detach','./mount'])
             else:
                 log('2. GPSBabel : FAILED')
-                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe required installer '+e+' is not part of the installation bundle.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
+                ltxt+='\n\nGPSBABEL - INSTALLATION FAILED\nThe required installer '+e+' is not part of the installation archive.  Please install GPSBabel using the online installer from gpsbabel.org.  You may then need to update the gpsbabel_exe location in gpsio-host.ini in the host folder.'
                 return
 
-    # check again
+    # check again after a few seconds
     time.sleep(3)
     g=findGPSBabel()
     if g[0]: # installed
@@ -511,23 +516,35 @@ def stage_4():
 ####################################################################
 stages.sort()
 
-if any(item in stages for item in ['1a','1b','1c']):
-    log('1. Browser Extension(s) :')
-
 # if multiple stages are being done, delete the log file first
 if len(stages)>1:
     try:
-        os.remove(os.path.join(INSTALL_TMP,'install-notices.txt'))
-        os.remove(os.path.join(HOST_DIR,'install-log.txt'))
+        os.remove(NOTICES_FILE)
+        os.remove(LOG_FILE)
     except:
         pass
+
+if any(item in stages for item in ['1a','1b','1c']):
+    log('1. Browser Extension(s) :')
+
 for stage in stages:
     funcName='stage_'+stage
     globals()[funcName]()
 
 if ltxt!='':
-    with open(os.path.join(INSTALL_TMP,'install-notices.txt'),'a') as f:
+    with open(NOTICES_FILE,'a') as f:
         f.write(ltxt)
 
-exit(0) # required for mac pkgbuild
+# notices should appear at the end of the log file
+if len(stages)>1 and darwin:
+    with open(NOTICES_FILE,'r') as nf:
+        d=nf.read()
+    with open(LOG_FILE,'a') as lf:
+        lf.write(d)
+
+if darwin: # need to do the cleanup here for mac; NSIS does cleanup for Windows
+    import shutil
+    shutil.rmtree(INSTALL_TMP)
+
+exit(0) # required for mac pkgbuild postinstall script
 
