@@ -7,3 +7,5 @@ tmp
 extension/gpsio-chrome-extension
 extension/gpsio-firefox-extension
 extension/gpsio-edge-extension
+installer/pkgbuild_root
+installer/pkgbuild_scripts

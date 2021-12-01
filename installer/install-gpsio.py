@@ -101,6 +101,7 @@ elif darwin:
     # tilde (~) won't be meaningful when this is run as root; ~ is replaced with home dir of logged-in-users later in code
     CHROME_EXTENSIONS_FOLDER='~/Library/Application Support/Google/Chrome/Default/Extensions'
     EDGE_EXTENSIONS_FOLDER='~/Library/Application Support/Microsoft/Edges/Default/Extensions'
+    FIREFOX_PROFILES_FOLDER='~/Library/Application Support/Firefox/Profiles'
     CHROME_INSTALL_JSON='/Library/Application Support/Google/Chrome/External Extensions/'+CHROME_EXTENSION_ID+'.json'
     EDGE_INSTALL_JSON='/Library/Application Support/Microsoft/Edge/External Extensions/'+EDGE_EXTENSION_ID+'.json'
     HOST_MANIFEST_FILE={
@@ -118,8 +119,11 @@ elif linux:
 else:
     sys.exit('unknown platform '+str(sys.platform))
 
-NOTICES_FILE=os.path.join(INSTALL_TMP,'install-notices.txt') # post-install message box in NSIS
-LOG_FILE=os.path.join(HOST_DIR,'install-log.txt')
+LOG_DIR=pwd
+if os.path.isdir(HOST_DIR):
+    LOG_DIR=HOST_DIR
+NOTICES_FILE=os.path.join(LOG_DIR,'install-notices.txt') # post-install message box in NSIS
+LOG_FILE=os.path.join(LOG_DIR,'install-log.txt')
 
 def log(t):
     print(t)
@@ -292,85 +296,46 @@ def stage_1b():
         ltxt+='\n\nFIREFOX EXTENSION installation failed; it appears the required .xpi file was not extracted with the GPSIO installer.  Please contact the developer.'
         return
     # since the current profile can't be determined from code, just install it to all profiles
-    if os.path.isdir(FIREFOX_PROFILES_FOLDER): # won't exist if Firefox is not installed
-        installedCount=0
-        firefox_profile_names=os.listdir(FIREFOX_PROFILES_FOLDER)
-        for firefox_profile_name in firefox_profile_names:
-            firefox_extensions_folder=os.path.join(FIREFOX_PROFILES_FOLDER,firefox_profile_name,'extensions')
-            # if no other extensions have been installed, prevent creation of a file named 'Extensions'
-            os.makedirs(firefox_extensions_folder,exist_ok=True)
-            xpiTarget=os.path.join(firefox_extensions_folder,FIREFOX_EXTENSION_ID+'.xpi')
-            if not os.path.isfile(xpiTarget):
-                installedCount+=1
-                shutil.copyfile(xpiSource,xpiTarget)
-        if installedCount==0:
-            log('  1b. Firefox Extension: already installed for all profiles')
-        else:
-            suffix=''
-            if installedCount>1:
-                suffix='s'
-            log('  1b. Firefox Extension: installed for '+str(installedCount)+' profile'+suffix)
-            ltxt+='\n\nFIREFOX EXTENSION installation has been triggered for '+str(installedCount)+' profile'+suffix+'; on or before the next time you start Firefox, it may prompt you to enable the gpsio extension.  Make sure to enable the extension.'
+    profiles_folders=[]
+    already_installed_users=[]
+    if '~' in FIREFOX_PROFILES_FOLDER:
+        for user in who:
+            profiles_folders.append(FIREFOX_PROFILES_FOLDER.replace('~','/Users/'+user))
     else:
-        log('  1b. Firefox Extension : skipped')
-        ltxt+='\n\nFIREFOX EXTENSION installation was skipped; it appears you do not have Firefox installed, since its AppData folder does not exist.  You can re-run this installer to try again later, or add the extension by hand from Firefox.'
+        profiles_folders=[FIREFOX_PROFILES_FOLDER]
+    installedCount=0
+    noProfilesCount=0
+    for profiles_folder in profiles_folders:
+        if os.path.isdir(profiles_folder): # won't exist if Firefox is not installed
+            firefox_profile_names=os.listdir(profiles_folder)
+            for firefox_profile_name in firefox_profile_names:
+                firefox_extensions_folder=os.path.join(profiles_folder,firefox_profile_name,'extensions')
+                # if no other extensions have been installed, prevent creation of a file named 'Extensions'
+                os.makedirs(firefox_extensions_folder,exist_ok=True)
+                xpiTarget=os.path.join(firefox_extensions_folder,FIREFOX_EXTENSION_ID+'.xpi')
+                if not os.path.isfile(xpiTarget):
+                    installedCount+=1
+                    shutil.copyfile(xpiSource,xpiTarget)
+        else:
+            noProfilesCount+=1
+    if installedCount==0:
+        if noProfilesCount<len(profiles_folders): # at least one user did have Firefox installed
+            log('  1b. Firefox Extension: already installed for all profiles')
+            if noProfilesCount!=0:
+                ltxt+='\n\nFIREFOX EXTENSION was installed for all profiles of all users that had a Firefox installation, but some users did not have a Firefox installation and were skipped.'
+        else: # noProfilesCount equals number of users: nobody has Firefox installed
+            log('  1b. Firefox Extension : skipped')
+            ltxt+='\n\nFIREFOX EXTENSION installation was skipped; it appears you do not have Firefox installed, since its AppData folder does not exist.  You can re-run this installer to try again later, or add the extension by hand from Firefox.'
+    else:
+        suffix=''
+        if installedCount>1:
+            suffix='s'
+        log('  1b. Firefox Extension: installed for '+str(installedCount)+' profile'+suffix)
+        ltxt+='\n\nFIREFOX EXTENSION installation has been triggered for '+str(installedCount)+' profile'+suffix+'; on or before the next time you start Firefox, it may prompt you to enable the gpsio extension.  Make sure to enable the extension.'
 
 # 1c. attempt to install Edge extension
 def stage_1c():
     ce_install('1c. Edge')
-
-#     global ltxt
-#     #  is the extension already installed?
-#     if os.path.isdir(os.path.join(EDGE_EXTENSIONS_FOLDER,EDGE_EXTENSION_ID)):
-#         log('  1c. Edge Extension : already installed')
-#         return
-#     else:
-#         if win32: # add registry entry if needed
-#             flags=winreg.KEY_ALL_ACCESS
-#             if 'WOW64' in CHROME_REGISTRY_BASE_KEY:
-#                 flags=winreg.KEY_ALL_ACCESS|winreg.KEY_WOW64_64KEY
-#             try:
-#                 key=winreg.CreateKeyEx(HKLM,EDGE_REGISTRY_FULL_KEY,access=flags)
-#             except PermissionError:
-#                 log('Permission error: Edge key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
-#                 return
-#             except Exception as e:
-#                 log(e)
-#                 return
-#             needToWrite=False
-#             try:
-#                 val=winreg.QueryValueEx(key,'update_url')
-#             except PermissionError:
-#                 log('Permission error: Edge key value cannot be queried')
-#                 return
-#             except: # value does not exist
-#                 needToWrite=True
-#             else:
-#                 if val[0]==EDGE_UPDATE_URL:
-#                     # key exists with correct value, but extension directory was not found;
-#                     #  this does not mean the attempt failed;
-#                     #  attempting to verify by checking the directory again is not reliable:
-#                     #  - maybe blocklisted
-#                     #  - maybe browser is not installed
-#                     #  - maybe browser is installed but not currently running
-#                     #  but we can try one more time by deleting and re-adding update_url
-#                     winreg.DeleteValue(key,'update_url')
-#                     time.sleep(1)
-#                     needToWrite=True
-#                 else:
-#                     needToWrite=True
-#             if needToWrite:
-#                 winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,EDGE_UPDATE_URL)
-#                 log('  1c. Edge Extension : installation attempted')
-#                 # ltxt+="\n\nEDGE EXTENSION installation has been triggered; on or before the next time you start Edge, it should prompt you to enable the gpsio extension.  Make sure to enable the extension."
-#             winreg.CloseKey(key)
-#         elif darwin:
-#             # add json file - this doesn't take effect til Edge restart, and it is silent and not enabled by default,
-#             #  so the user will probably add the extension by hand instead; but we may as well try
-#             os.makedirs(os.path.dirname(EDGE_INSTALL_JSON),exist_ok=True)
-#             with open(EDGE_INSTALL_JSON,'w') as f:
-#                 f.write('{\n  "external_update_url":"'+EDGE_UPDATE_URL+'"\n}')
-#                 log('  1c. Edge Extension : installation attempted')
 
 # 2. attempt to install GPSBabel
 def stage_2():
@@ -558,6 +523,10 @@ if darwin:
     who=list(set(str(subprocess.run(['who','-q'],capture_output=True).stdout,'utf-8').split('\n')[0].split()))
     # log('who:'+str(who))
 
+if darwin:
+    log('GPSIO installation log '+datetime.now().strftime('%m/%d/%Y  %H:%M:%S'))
+    log('--------------------------------------------')
+
 if any(item in stages for item in ['1a','1b','1c']):
     log('1. Browser Extension(s) :')
 
@@ -567,22 +536,27 @@ for stage in stages:
     funcName='stage_'+stage
     globals()[funcName]()
 
-# cleanup - but not if the script is being run standalone in which case the dirs may not exist:
-if os.path.isdir(INSTALL_TMP) and os.path.isdir(HOST_DIR):
-    if ltxt!='':
-        with open(NOTICES_FILE,'a') as f:
-            f.write(ltxt)
+if ltxt!='':
+    with open(NOTICES_FILE,'a') as f:
+        f.write(ltxt)
+    if darwin:
+        print(ltxt)
 
-    # notices should appear at the end of the log file
-    if len(stages)>1 and darwin:
-        with open(NOTICES_FILE,'r') as nf:
-            d=nf.read()
-        with open(LOG_FILE,'a') as lf:
-            lf.write(d)
+# for mac, notices should appear at the end of the log file
+if len(stages)>1 and darwin:
+    with open(NOTICES_FILE,'r') as nf:
+        d=nf.read()
+    with open(LOG_FILE,'a') as lf:
+        lf.write(d)
 
-    if darwin: # need to do the cleanup here for mac; NSIS does cleanup for Windows
-        import shutil
+if LOG_DIR!=HOST_DIR:
+    shutil.copy(LOG_FILE,HOST_DIR)
+
+if win32:
+    shutil.copy(NOTICES_FILE,INSTALL_TMP) # NSIS post-install message requires this file
+
+if darwin: # need to do the cleanup here for mac; NSIS does cleanup for Windows
+    if os.path.isdir(INSTALL_TMP):
         shutil.rmtree(INSTALL_TMP)
 
 exit(0) # required for mac pkgbuild postinstall script
-

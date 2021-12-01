@@ -1,3 +1,11 @@
-/bin/cp -f install-gpsio.py scripts/postinstall
-pkgbuild --identifier gpsio.pkg --root pkgbuild_root --scripts scripts --install-location /Library/gpsio-install-tmp gpsio.pkg
-
+/bin/mkdir pkgbuild_root
+/bin/mkdir pkgbuild_root/host
+/bin/mkdir pkgbuild_scripts
+/bin/cp -f ../host/gpsio-host.py pkgbuild_root/host
+/bin/cp -f ../host/gpsio-host.ini pkgbuild_root/host
+/bin/cp -f install-gpsio.py pkgbuild_scripts/postinstall
+/bin/cp -f prerequisites/common/*.* pkgbuild_root
+/bin/cp -f prerequisites/mac/*.* pkgbuild_root
+pkgbuild --identifier gpsio.pkg --root pkgbuild_root --scripts pkgbuild_scripts --install-location /Library/gpsio-install-tmp gpsio.pkg
+# /bin/rm -rf pkgbuild_root
+# /bin/rm -rf pkgbuild_scripts
