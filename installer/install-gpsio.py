@@ -98,6 +98,7 @@ elif darwin:
     #     HOST_DIR='/Library/'+EXTENSION_HANDLE
     HOST_DIR='/Library/GPSIO'
     INSTALL_TMP='/Library/gpsio-install-tmp' # this should be the --install-location value of pkgbuild
+    # tilde (~) won't be meaningful when this is run as root; ~ is replaced with home dir of logged-in-users later in code
     CHROME_EXTENSIONS_FOLDER='~/Library/Application Support/Google/Chrome/Default/Extensions'
     EDGE_EXTENSIONS_FOLDER='~/Library/Application Support/Microsoft/Edges/Default/Extensions'
     CHROME_INSTALL_JSON='/Library/Application Support/Google/Chrome/External Extensions/'+CHROME_EXTENSION_ID+'.json'
@@ -196,61 +197,91 @@ def findGPSBabel():
 #  (for firefox, just copy the .xpi file into place)
 # https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/developer-guide/alternate-distribution-options
 
-# 1a. attempt to install Chrome extension
-def stage_1a():
+# ce_install - common code for Chrome and Edge
+def ce_install(stageName):
     global ltxt
-    #  is the extension already installed?
-    if os.path.isdir(os.path.join(CHROME_EXTENSIONS_FOLDER,CHROME_EXTENSION_ID)):
-        log('  1a. Chrome Extension : already installed')
-        return
+    if stageName=='1a. Chrome':
+        EXTENSIONS_FOLDER=CHROME_EXTENSIONS_FOLDER
+        EXTENSION_ID=CHROME_EXTENSION_ID
+        UPDATE_URL=CHROME_UPDATE_URL
+        if win32:
+            REGISTRY_BASE_KEY=CHROME_REGISTRY_BASE_KEY
+            REGISTRY_FULL_KEY=CHROME_REGISTRY_FULL_KEY
+        if darwin:
+            INSTALL_JSON=CHROME_INSTALL_JSON
+    elif stageName=='1c. Edge':
+        EXTENSIONS_FOLDER=EDGE_EXTENSIONS_FOLDER
+        EXTENSION_ID=EDGE_EXTENSION_ID
+        UPDATE_URL=EDGE_UPDATE_URL
+        if win32:
+            REGISTRY_BASE_KEY=EDGE_REGISTRY_BASE_KEY
+            REGISTRY_FULL_KEY=EDGE_REGISTRY_FULL_KEY
+        if darwin:
+            INSTALL_JSON=EDGE_INSTALL_JSON
     else:
-        if win32: # add registry entry if needed
-            flags=winreg.KEY_ALL_ACCESS
-            if 'WOW64' in CHROME_REGISTRY_BASE_KEY:
-                flags=winreg.KEY_ALL_ACCESS|winreg.KEY_WOW64_64KEY
-            try:
-                key=winreg.CreateKeyEx(HKLM,CHROME_REGISTRY_FULL_KEY,access=flags)
-            except PermissionError:
-                log('Permission error: Chrome key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
-                return
-            needToWrite=False
-            try:
-                val=winreg.QueryValueEx(key,'update_url')
-            except PermissionError:
-                log('Permission error: Chrome key value cannot be queried')
-                return
-            except: # value does not exist
+        log('ce_install called with unexpected stage name "'+str(stageName)+'"')
+    #  is the extension already installed?
+    extensions_folders=[]
+    already_installed_users=[]
+    if '~' in EXTENSIONS_FOLDER:
+        for user in who:
+            extensions_folders.append(EXTENSIONS_FOLDER.replace('~','/Users/'+user))
+    else:
+        extensions_folders=[EXTENSIONS_FOLDER]
+    # return with 'already installed' if every currently logged in user already has the extension installed
+    # log('extensions_folders:'+str(extensions_folders))
+    for folder in extensions_folders:
+        already_installed_users.append(os.path.isdir(os.path.join(folder,EXTENSION_ID)))
+    # log('already_installed_users:'+str(already_installed_users))
+    if False not in already_installed_users:
+        log('  '+stageName+' Extension : already installed')
+        return
+    if win32: # add registry entry if needed
+        flags=winreg.KEY_ALL_ACCESS
+        if 'WOW64' in REGISTRY_BASE_KEY:
+            flags=winreg.KEY_ALL_ACCESS|winreg.KEY_WOW64_64KEY
+        try:
+            key=winreg.CreateKeyEx(HKLM,REGISTRY_FULL_KEY,access=flags)
+        except PermissionError:
+            log('Permission error: Extension key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
+            return
+        needToWrite=False
+        try:
+            val=winreg.QueryValueEx(key,'update_url')
+        except PermissionError:
+            log('Permission error: Extension key value cannot be queried')
+            return
+        except: # value does not exist
+            needToWrite=True
+        else:
+            if val[0]==UPDATE_URL:
+                # key exists with correct value, but extension directory was not found;
+                #  this does not mean the attempt failed;
+                #  attempting to verify by checking the directory again is not reliable:
+                #  - maybe blocklisted
+                #  - maybe browser is not installed
+                #  - maybe browser is installed but not currently running
+                #  but we can try one more time by deleting and re-adding update_url
+                winreg.DeleteValue(key,'update_url')
+                time.sleep(1)
                 needToWrite=True
             else:
-                if val[0]==CHROME_UPDATE_URL:
-                    # key exists with correct value, but extension directory was not found;
-                    #  this does not mean the attempt failed;
-                    #  attempting to verify by checking the directory again is not reliable:
-                    #  - maybe blocklisted
-                    #  - maybe browser is not installed
-                    #  - maybe browser is installed but not currently running
-                    #  but we can try one more time by deleting and re-adding update_url
-                    winreg.DeleteValue(key,'update_url')
-                    time.sleep(1)
-                    needToWrite=True
-                    # log('  1a. Chrome Extension : FAILED')
-                    # ltxt+='\n\nCHROME EXTENSION - INSTALLATION FAILED\nIf you use Chrome, you will need to add the extension to Chrome by hand (i.e. from Chrome).  You can search for \'gpsio\' at the Chrome Web Store.  The direct link is in the documentation at github.com/ncssar/gpsio.'
-                    # return
-                else:
-                    needToWrite=True
-            if needToWrite:
-                winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,CHROME_UPDATE_URL)
-                log('  1a. Chrome Extension : installation attempted')
-                # ltxt+='\n\nCHROME EXTENSION installation has been triggered; on or before the next time you start Chrome, you to enable the gpsio extension.  Make sure to enable the extension.'
-            winreg.CloseKey(key)
-        elif darwin:
-            # add json file - this doesn't take effect til Chrome restart, and it is silent and not enabled by default,
-            #  so the user will probably add the extension by hand instead; but we may as well try
-            os.makedirs(os.path.dirname(CHROME_INSTALL_JSON),exist_ok=True)
-            with open(CHROME_INSTALL_JSON,'w') as f:
-                f.write('{\n  "external_update_url":"'+CHROME_UPDATE_URL+'"\n}')
-                log('  1a. Chrome Extension : installation attempted')
+                needToWrite=True
+        if needToWrite:
+            winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,UPDATE_URL)
+            log('  '+stageName+' Extension : installation attempted')
+        winreg.CloseKey(key)
+    elif darwin:
+        # add json file - this doesn't take effect til browser restart, and it is silent and not enabled by default,
+        #  so the user will probably add the extension by hand instead; but we may as well try
+        os.makedirs(os.path.dirname(INSTALL_JSON),exist_ok=True)
+        with open(INSTALL_JSON,'w') as f:
+            f.write('{\n  "external_update_url":"'+UPDATE_URL+'"\n}')
+            log('  '+stageName+' Extension : installation attempted')
 
+# 1a. attempt to install Chrome extension
+def stage_1a():
+    ce_install('1a. Chrome')
 
 # 1b. attempt to install Firefox extension
 def stage_1b():
@@ -286,58 +317,60 @@ def stage_1b():
 
 # 1c. attempt to install Edge extension
 def stage_1c():
-    global ltxt
-    #  is the extension already installed?
-    if os.path.isdir(os.path.join(EDGE_EXTENSIONS_FOLDER,EDGE_EXTENSION_ID)):
-        log('  1c. Edge Extension : already installed')
-        return
-    else:
-        if win32: # add registry entry if needed
-            flags=winreg.KEY_ALL_ACCESS
-            if 'WOW64' in CHROME_REGISTRY_BASE_KEY:
-                flags=winreg.KEY_ALL_ACCESS|winreg.KEY_WOW64_64KEY
-            try:
-                key=winreg.CreateKeyEx(HKLM,EDGE_REGISTRY_FULL_KEY,access=flags)
-            except PermissionError:
-                log('Permission error: Edge key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
-                return
-            except Exception as e:
-                log(e)
-                return
-            needToWrite=False
-            try:
-                val=winreg.QueryValueEx(key,'update_url')
-            except PermissionError:
-                log('Permission error: Edge key value cannot be queried')
-                return
-            except: # value does not exist
-                needToWrite=True
-            else:
-                if val[0]==EDGE_UPDATE_URL:
-                    # key exists with correct value, but extension directory was not found;
-                    #  this does not mean the attempt failed;
-                    #  attempting to verify by checking the directory again is not reliable:
-                    #  - maybe blocklisted
-                    #  - maybe browser is not installed
-                    #  - maybe browser is installed but not currently running
-                    #  but we can try one more time by deleting and re-adding update_url
-                    winreg.DeleteValue(key,'update_url')
-                    time.sleep(1)
-                    needToWrite=True
-                else:
-                    needToWrite=True
-            if needToWrite:
-                winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,EDGE_UPDATE_URL)
-                log('  1c. Edge Extension : installation attempted')
-                # ltxt+="\n\nEDGE EXTENSION installation has been triggered; on or before the next time you start Edge, it should prompt you to enable the gpsio extension.  Make sure to enable the extension."
-            winreg.CloseKey(key)
-        elif darwin:
-            # add json file - this doesn't take effect til Edge restart, and it is silent and not enabled by default,
-            #  so the user will probably add the extension by hand instead; but we may as well try
-            os.makedirs(os.path.dirname(EDGE_INSTALL_JSON),exist_ok=True)
-            with open(EDGE_INSTALL_JSON,'w') as f:
-                f.write('{\n  "external_update_url":"'+EDGE_UPDATE_URL+'"\n}')
-                log('  1c. Edge Extension : installation attempted')
+    ce_install('1c. Edge')
+
+#     global ltxt
+#     #  is the extension already installed?
+#     if os.path.isdir(os.path.join(EDGE_EXTENSIONS_FOLDER,EDGE_EXTENSION_ID)):
+#         log('  1c. Edge Extension : already installed')
+#         return
+#     else:
+#         if win32: # add registry entry if needed
+#             flags=winreg.KEY_ALL_ACCESS
+#             if 'WOW64' in CHROME_REGISTRY_BASE_KEY:
+#                 flags=winreg.KEY_ALL_ACCESS|winreg.KEY_WOW64_64KEY
+#             try:
+#                 key=winreg.CreateKeyEx(HKLM,EDGE_REGISTRY_FULL_KEY,access=flags)
+#             except PermissionError:
+#                 log('Permission error: Edge key cannot be opened with KEY_ALL_ACCESS permission.  This script must be run as administrator.')
+#                 return
+#             except Exception as e:
+#                 log(e)
+#                 return
+#             needToWrite=False
+#             try:
+#                 val=winreg.QueryValueEx(key,'update_url')
+#             except PermissionError:
+#                 log('Permission error: Edge key value cannot be queried')
+#                 return
+#             except: # value does not exist
+#                 needToWrite=True
+#             else:
+#                 if val[0]==EDGE_UPDATE_URL:
+#                     # key exists with correct value, but extension directory was not found;
+#                     #  this does not mean the attempt failed;
+#                     #  attempting to verify by checking the directory again is not reliable:
+#                     #  - maybe blocklisted
+#                     #  - maybe browser is not installed
+#                     #  - maybe browser is installed but not currently running
+#                     #  but we can try one more time by deleting and re-adding update_url
+#                     winreg.DeleteValue(key,'update_url')
+#                     time.sleep(1)
+#                     needToWrite=True
+#                 else:
+#                     needToWrite=True
+#             if needToWrite:
+#                 winreg.SetValueEx(key,'update_url',0,winreg.REG_SZ,EDGE_UPDATE_URL)
+#                 log('  1c. Edge Extension : installation attempted')
+#                 # ltxt+="\n\nEDGE EXTENSION installation has been triggered; on or before the next time you start Edge, it should prompt you to enable the gpsio extension.  Make sure to enable the extension."
+#             winreg.CloseKey(key)
+#         elif darwin:
+#             # add json file - this doesn't take effect til Edge restart, and it is silent and not enabled by default,
+#             #  so the user will probably add the extension by hand instead; but we may as well try
+#             os.makedirs(os.path.dirname(EDGE_INSTALL_JSON),exist_ok=True)
+#             with open(EDGE_INSTALL_JSON,'w') as f:
+#                 f.write('{\n  "external_update_url":"'+EDGE_UPDATE_URL+'"\n}')
+#                 log('  1c. Edge Extension : installation attempted')
 
 # 2. attempt to install GPSBabel
 def stage_2():
@@ -520,6 +553,11 @@ if len(stages)>1:
     except:
         pass
 
+if darwin:
+    # get a unique list of all users currently logged in; install the apps for each of them
+    who=list(set(str(subprocess.run(['who','-q'],capture_output=True).stdout,'utf-8').split('\n')[0].split()))
+    # log('who:'+str(who))
+
 if any(item in stages for item in ['1a','1b','1c']):
     log('1. Browser Extension(s) :')
 
@@ -529,21 +567,22 @@ for stage in stages:
     funcName='stage_'+stage
     globals()[funcName]()
 
-# cleanup
-if ltxt!='':
-    with open(NOTICES_FILE,'a') as f:
-        f.write(ltxt)
+# cleanup - but not if the script is being run standalone in which case the dirs may not exist:
+if os.path.isdir(INSTALL_TMP) and os.path.isdir(HOST_DIR):
+    if ltxt!='':
+        with open(NOTICES_FILE,'a') as f:
+            f.write(ltxt)
 
-# notices should appear at the end of the log file
-if len(stages)>1 and darwin:
-    with open(NOTICES_FILE,'r') as nf:
-        d=nf.read()
-    with open(LOG_FILE,'a') as lf:
-        lf.write(d)
+    # notices should appear at the end of the log file
+    if len(stages)>1 and darwin:
+        with open(NOTICES_FILE,'r') as nf:
+            d=nf.read()
+        with open(LOG_FILE,'a') as lf:
+            lf.write(d)
 
-if darwin: # need to do the cleanup here for mac; NSIS does cleanup for Windows
-    import shutil
-    shutil.rmtree(INSTALL_TMP)
+    if darwin: # need to do the cleanup here for mac; NSIS does cleanup for Windows
+        import shutil
+        shutil.rmtree(INSTALL_TMP)
 
 exit(0) # required for mac pkgbuild postinstall script
 
