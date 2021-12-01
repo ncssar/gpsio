@@ -110,7 +110,7 @@ You tried to install GPSIO but it's not working... what now?  Troubleshooting GP
     - RED: left-click 'check again' once or twice.  If the red line doesn't go away, go to the next step.
     - GREEN: contact the developer with exact details of the error you're seeing.
     - BLUE: follow the steps for GREEN; also, tell your local tech support that it's time to update the GPSIO host.
-3. Open a command terminal, go to the default gpsio installation directory (normally, the 'gpsio' directory under your user home directory), and run gpsio-host.py using python.  Any error messages in the first part of gpsio-host.py will show up here, but most of the code relies on being run through the browser so won't be tested by running it from the command line.
+3. Open a command terminal, go to the default gpsio installation directory (normally, C:\Program Files (x86)\GPSIO on Windows, or /Library/GPSIO on mac), and run gpsio-host.py using python.  It should appear to hang - just type a few letters and hit enter.  Any error messages in the first part of gpsio-host.py will show up here, but most of the code relies on being run through the browser so won't be tested by running it from the command line.
 4. If you see 'Reading data from GPS . . .' followed by a bold red line 'GPS Exception: Unexpected disconnect' when you try to import using GPSIO, check the GPSIO log file (normally gpsio-host_log.txt in your home directory).  This indicates that gpsio-host.py encountered an error, which will hopefully show up in the log file.
 
 Always feel free to contact the developer if you have any questions.
