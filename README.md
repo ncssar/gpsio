@@ -114,3 +114,17 @@ You tried to install GPSIO but it's not working... what now?  Troubleshooting GP
 4. If you see 'Reading data from GPS . . .' followed by a bold red line 'GPS Exception: Unexpected disconnect' when you try to import using GPSIO, check the GPSIO log file (normally gpsio-host_log.txt in your home directory).  This indicates that gpsio-host.py encountered an error, which will hopefully show up in the log file.
 
 Always feel free to contact the developer if you have any questions.
+
+## F.A.Q
+
+### Q: Does the extension use MV3 (Manifest Version 3)?
+A: Chrome has announced its timeline for end-of-life for MV2.  MV3 offers security and performance benefits.  The Chrome and Edge extensions are MV3 (beginning with version 1.0 in November 2020).  Firefox does not support MV3 at the time of writing.  If Firefox does support MV3 in the future, the GPSIO Firefox extension will be redone to match.
+
+### Q: Do I need to be connected to the internet when I run the installer?
+A: Strictly speaking, no you do not.  But, life will be easier if you are.  The installer inserts flags that indicate the extension should be added to the browsers.  Those flags can be set without internet, in which case the extension should automatically be added the next time you start the browser while connected to the internet.  The other components do not need an internet connection, and once the extensions are installed, you can use them offline from any web page.
+
+### Q: Why is the installer file so big (>70MB)?
+A: The unmodified prerequisites (GPSBabel installer, the Firefox extension archive, and the Garmin USB Drivers installer for Windows) are included in the installer.  This way, the prerequesistes can be installed without internet connection if needed, and the exact version numbers of the prerequisite tools are controlled.
+
+### Q: Why does the mac installer ask for permission to access files on removable drives?
+A: No idea.  Nothing in the installer requires access to removable drives.  [This question has been raised on Stackoverflow.](https://stackoverflow.com/questions/70173334)
