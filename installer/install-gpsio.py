@@ -41,16 +41,6 @@ win32=sys.platform=='win32'
 darwin=sys.platform=='darwin'
 linux=sys.platform=='linux'
 
-def log(t):
-    print(t)
-    if darwin:
-        with open(LOG_FILE,'a') as f:
-            f.write(t+'\n')
-
-if darwin|linux:
-    if not os.geteuid() == 0:
-        sys.exit('ERROR: gpsio-init.py must be run as root.')
-
 # For python 3.8 or later on Windows, this line is required before 'import oschmod',
 #  to avoid 'ImportError: DLL load failed while importing win32security: ...'
 # see https://stackoverflow.com/a/67437837/3577105
@@ -61,15 +51,6 @@ pwd=os.path.dirname(os.path.realpath(__file__))
 if win32:
     os.add_dll_directory(os.path.join(pwd,'host','dist','pywin32_system32'))
     import oschmod
-
-# for Windows, this is called from NSIS, and there will be one argument: stage to run
-# for Mac, this is called from installer, and the arguments will be predetermined by pkgbuild
-if win32:
-    parser=argparse.ArgumentParser()
-    parser.add_argument('stages',type=str,nargs='+')
-    args=parser.parse_args()
-elif darwin:
-    stages=['1a','1b','1c','2','3','4']
 
 gpsbabel_exe=False
 ltxt=''
@@ -134,11 +115,16 @@ elif linux:
         'edge':'/etc/opt/edge/native-messaging-hosts/com.caltopo.gpsio.json'}
 
 else:
-    log('unknown platform '+str(sys.platform))
-    sys.exit(1)
+    sys.exit('unknown platform '+str(sys.platform))
 
 NOTICES_FILE=os.path.join(INSTALL_TMP,'install-notices.txt') # post-install message box in NSIS
 LOG_FILE=os.path.join(HOST_DIR,'install-log.txt')
+
+def log(t):
+    print(t)
+    if darwin:
+        with open(LOG_FILE,'a') as f:
+            f.write(t+'\n')
 
 def findRegKeyWithEntry(keyName,entryName,entryValue):
     if 'WOW64' in keyName:
@@ -199,15 +185,6 @@ def findGPSBabel():
                 return [True,None] # apparently installed, but referenced executable not found
         else:
             return [False,None] # apparently not installed
-
-# platform dependent top-level code
-if win32:
-    import winreg
-    HKLM=winreg.HKEY_LOCAL_MACHINE
-    HKCU=winreg.HKEY_CURRENT_USER
-if darwin|linux:
-    os.makedirs(HOST_DIR,exist_ok=True)
-
 
 # 1. attempt to install browser extensions
 # the chrome and edge docs imply that this is an 'externally installed' extension, i.e.
@@ -514,12 +491,31 @@ def stage_4():
 ####################################################################
 # top level code: run the requested functions, in alphabetical order
 ####################################################################
-stages.sort()
+if darwin|linux:
+    if not os.geteuid() == 0:
+        sys.exit('ERROR: gpsio-init.py must be run as root.')
+
+# for Windows, this is called from NSIS, and there will be one argument: stage to run
+# for Mac, this is called from installer, and the arguments will be predetermined by pkgbuild
+if win32:
+    import winreg
+    HKLM=winreg.HKEY_LOCAL_MACHINE
+    HKCU=winreg.HKEY_CURRENT_USER
+    parser=argparse.ArgumentParser()
+    parser.add_argument('stages',type=str,nargs='+')
+    args=parser.parse_args()
+    stages=args.stages
+elif darwin:
+    os.makedirs(HOST_DIR,exist_ok=True)
+    stages=['1a','1b','1c','2','3','4']
 
 # if multiple stages are being done, delete the log file first
 if len(stages)>1:
     try:
         os.remove(NOTICES_FILE)
+    except:
+        pass
+    try:
         os.remove(LOG_FILE)
     except:
         pass
@@ -527,10 +523,13 @@ if len(stages)>1:
 if any(item in stages for item in ['1a','1b','1c']):
     log('1. Browser Extension(s) :')
 
+# run the stage(s)
+stages.sort()
 for stage in stages:
     funcName='stage_'+stage
     globals()[funcName]()
 
+# cleanup
 if ltxt!='':
     with open(NOTICES_FILE,'a') as f:
         f.write(ltxt)
