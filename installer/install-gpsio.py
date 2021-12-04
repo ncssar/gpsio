@@ -18,6 +18,8 @@
 # python install-gpsio.py 1a 1b 1c 2
 #  this will run stages 1a, 1b, 1c, and 2 before exiting
 
+# extensions are installed per user, but the native host manifest file (and registry key in Windows) is site-wide
+
 # stages:
 # 1a. attempt to install Chrome extension
 # 1b. attempt to install Firefox extension
@@ -69,7 +71,7 @@ if win32:
     PF='C:\\Program Files'
     PF86=PF+' (x86)'
     HOST_DIR=PF86+'\\GPSIO'
-    INSTALL_TMP=pwd # normally, the current directory is the unzipped tmp directory
+    INSTALL_TMP=pwd # normally, the current directory is the unzipped tmp directory, defined by NSIS
     CHROME_EXTENSIONS_FOLDER=os.getenv('LOCALAPPDATA')+'\\Google\\Chrome\\User Data\\Default\\Extensions'
     FIREFOX_PROFILES_FOLDER=os.getenv('APPDATA')+'\\Mozilla\\Firefox\\Profiles'
     EDGE_EXTENSIONS_FOLDER=os.getenv('LOCALAPPDATA')+'\\Microsoft\\Edge\\User Data\\Default\\Extensions'
@@ -127,9 +129,8 @@ LOG_FILE=os.path.join(LOG_DIR,'install-log.txt')
 
 def log(t):
     print(t)
-    if darwin:
-        with open(LOG_FILE,'a') as f:
-            f.write(t+'\n')
+    with open(LOG_FILE,'a') as f:
+        f.write(t+'\n')
 
 def findRegKeyWithEntry(keyName,entryName,entryValue):
     if 'WOW64' in keyName:
@@ -412,6 +413,14 @@ def stage_4():
     # 4a. copy host files into place
     if os.path.isdir(INSTALL_TMP):
         if os.path.isdir(HOST_DIR): # previously installed; force-update but make backups first
+            # remove old log files in host dir if they exist for win - but preserve for mac since
+            #   it will be running all stages at once and writing directly to the host dir; stale
+            #   log removal for mac is handled in top-level code
+            if win32:
+                if os.path.isfile(os.path.join(HOST_DIR,'install-log.txt')):
+                    os.remove(os.path.join(HOST_DIR,'install-log.txt'))
+                if os.path.isfile(os.path.join(HOST_DIR,'install-notices.txt')):
+                    os.remove(os.path.join(HOST_DIR,'install-notices.txt'))
             for f in [x for x in os.listdir(HOST_DIR) if os.path.isfile(x)]: # all files (not subdirs) in host dir
                 if not filecmp.cmp(os.path.join(HOST_DIR,f),os.path.join(INSTALL_TMP,'host',f)):
                     # if existing file is not identical to file about to be installed, make a backup
@@ -460,10 +469,11 @@ def stage_4():
         f.write('{\n  "name": "'+EXTENSION_HANDLE+'",\n  "description": "GPS IO",\n  "path": "'+host_path+'",\n  "type": "stdio",\n  "allowed_origins": [\n    "chrome-extension://'+EDGE_EXTENSION_ID+'/"\n  ]\n}')
 
     # 4c. Windows: write registry entries for host manifest file locations
+    #   (we saw one computer that was not looking in HKCU; better to use HKLM anyway)
     if win32:
-        winreg.SetValueEx(winreg.CreateKey(HKCU,CHROME_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'chrome-manifest.json'))
-        winreg.SetValueEx(winreg.CreateKey(HKCU,FIREFOX_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'firefox-manifest.json'))
-        winreg.SetValueEx(winreg.CreateKey(HKCU,EDGE_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'edge-manifest.json'))
+        winreg.SetValueEx(winreg.CreateKey(HKLM,CHROME_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'chrome-manifest.json'))
+        winreg.SetValueEx(winreg.CreateKey(HKLM,FIREFOX_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'firefox-manifest.json'))
+        winreg.SetValueEx(winreg.CreateKey(HKLM,EDGE_NMH_KEY),'',0,winreg.REG_SZ,os.path.join(HOST_DIR,'edge-manifest.json'))
     
     # 4d. edit gpsio-host.ini with confirmed gpsbabel executable path
     #  (this depends on stage 2 having run in the same session!)
@@ -498,7 +508,6 @@ if darwin|linux:
 if win32:
     import winreg
     HKLM=winreg.HKEY_LOCAL_MACHINE
-    HKCU=winreg.HKEY_CURRENT_USER
     parser=argparse.ArgumentParser()
     parser.add_argument('stages',type=str,nargs='+')
     args=parser.parse_args()
@@ -507,16 +516,16 @@ elif darwin:
     os.makedirs(HOST_DIR,exist_ok=True)
     stages=['1a','1b','1c','2','3','4']
 
-# if multiple stages are being done, delete the log file first
-if len(stages)>1:
-    try:
-        os.remove(NOTICES_FILE)
-    except:
-        pass
-    try:
-        os.remove(LOG_FILE)
-    except:
-        pass
+# # if multiple stages are being done, delete the log file first
+# if len(stages)>1:
+#     try:
+#         os.remove(NOTICES_FILE)
+#     except:
+#         pass
+#     try:
+#         os.remove(LOG_FILE)
+#     except:
+#         pass
 
 if darwin:
     # get a unique list of all users currently logged in; install the apps for each of them
@@ -550,13 +559,18 @@ if len(stages)>1 and darwin:
         lf.write(d)
 
 if LOG_DIR!=HOST_DIR:
-    shutil.copy(LOG_FILE,HOST_DIR)
+    if os.path.isdir(HOST_DIR): # this code is run for every stage in Windows, but we only want the copy to take place after stage 4
+        if os.path.isfile(LOG_FILE):
+            shutil.copy(LOG_FILE,HOST_DIR)
+        if os.path.isfile(NOTICES_FILE):
+            shutil.copy(NOTICES_FILE,HOST_DIR)
 
-if win32:
-    shutil.copy(NOTICES_FILE,INSTALL_TMP) # NSIS post-install message requires this file
+# if win32:
+#     if os.path.isfile(NOTICES_FILE):
+#         shutil.copy(NOTICES_FILE,INSTALL_TMP) # NSIS post-install message requires this file
 
 if darwin: # need to do the cleanup here for mac; NSIS does cleanup for Windows
     if os.path.isdir(INSTALL_TMP):
         shutil.rmtree(INSTALL_TMP)
 
-exit(0) # required for mac pkgbuild postinstall script
+sys.exit(0) # required for mac pkgbuild postinstall script

@@ -6,7 +6,7 @@
 
 Name "GPSIO"
 OutFile "install-gpsio.exe"
-InstallDir "$EXEDIR\tmp"
+InstallDir "$EXEDIR\install-gpsio-tmp"
 
 !include LogicLib.nsh
 !include nsdialogs.nsh
@@ -54,7 +54,8 @@ Section "Startup"
     SetDetailsPrint none
     SetOutPath "$INSTDIR"
     File "install-gpsio.py"
-    File "prerequisites\*.*"
+    File "prerequisites\common\*.*"
+    File "prerequisites\win\*.*"
     SetOutPath "$INSTDIR\host"
     File /r "..\host\dist"
     File "..\host\gpsio-host.ini"
