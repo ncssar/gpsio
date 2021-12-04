@@ -121,9 +121,7 @@ elif linux:
 else:
     sys.exit('unknown platform '+str(sys.platform))
 
-LOG_DIR=pwd
-if os.path.isdir(HOST_DIR):
-    LOG_DIR=HOST_DIR
+LOG_DIR=INSTALL_TMP
 NOTICES_FILE=os.path.join(LOG_DIR,'install-notices.txt') # post-install message box in NSIS
 LOG_FILE=os.path.join(LOG_DIR,'install-log.txt')
 
