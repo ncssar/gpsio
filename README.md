@@ -4,6 +4,12 @@
 
 GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages (primarily CalTopo and SARTopo) and Garmin GPS devices.
 
+| Installer              | Download          |
+| :--------------------- | :---------------- |
+| Windows Installer      | [install-gpsio.exe](https://github.com/ncssar/gpsio/raw/master/installer/install-gpsio.exe) |
+| MacOS Installer        | Coming Soon       |
+| Linux Installer        | Testers needed    |
+
 GPSIO is a replacement for the Garmin Communicator plugin, built on open web standards.  It was created around the time that web browsers stopped supporting NPAPI Plugins such as Garmin Communicator (2016-2017), with a transfer of ownership in 2020/2021 and new browser extensions (with new extension IDs) starting in November 2021.
 
 Supported browsers are Chrome, Firefox, and Edge. Supported OSs are Mac, Windows and (soon) Linux, though currently there is only a Windows installer.  The Mac installer is in progress; until it is available, you will need to follow the 'Manual Installation' procedure below.
@@ -16,7 +22,7 @@ The only part of GPSIO that the user normally sees is the transfer method select
 
 
 # Installing GPSIO
-A Windows installer (using Nullsoft Scriptable Install System) is in final testing.  Until it is published, please follow the manual installation process:
+A Windows installer (using Nullsoft Scriptable Install System) is available above.  Until installers for MacOS and Linux are published, please follow the manual installation process:
 
 ## Manual installation
 
