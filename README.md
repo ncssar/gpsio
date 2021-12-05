@@ -73,7 +73,7 @@ Click 'gpsio added to Firefox' which should prompt you to enable the extension.
 ### Extension permissions
 When the GPSIO extension is about to be added to your web browser, you will be told that it needs two types of permission that may sound daunting.  Why are these permissions needed?
 1. Read and change all your data on all websites - Originally, the extension was limited to only be usable on sartopo.com and caltopo.com.  With the advent of CalTopo Desktop, the host machine name - therefore the web page domain name - could be anything (localhost, myMapServer, 192.168.200.200, etc.).  While the permission sounds scary, the extension only transfers GPS data - but it can be used on any web page.
-2. Communicate with cooperating native applications - This Native Messaging is explained above in 'GPSIO Architecture'.  The extension only communicates with the official GPSIO host application.
+2. Communicate with cooperating native applications - This Native Messaging is explained below in 'GPSIO Architecture'.  The extension only communicates with the official GPSIO host application.
 
 
 # Details
@@ -124,7 +124,7 @@ Always feel free to contact the developer if you have any questions.
 ## F.A.Q
 
 ### Q: Does the extension use MV3 (Manifest Version 3)?
-A: Chrome has announced its timeline for end-of-life for MV2.  MV3 offers security and performance benefits.  The Chrome and Edge extensions are MV3 (beginning with version 1.0 in November 2020).  Firefox does not support MV3 at the time of writing.  If Firefox does support MV3 in the future, the GPSIO Firefox extension will be redone to match.
+A: Chrome has announced its timeline for end-of-life for MV2.  MV3 offers security and performance benefits.  The Chrome and Edge extensions are MV3 (beginning with version 1.0 in November 2021).  Firefox does not support MV3 at the time of writing.  If Firefox does support MV3 in the future, the GPSIO Firefox extension will be redone to match.
 
 ### Q: Do I need to be connected to the internet when I run the installer?
 A: Strictly speaking, no you do not.  But, life will be easier if you are.  The installer inserts flags that indicate the extension should be added to the browsers.  Those flags can be set without internet, in which case the extension should automatically be added the next time you start the browser while connected to the internet.  The other components do not need an internet connection, and once the extensions are installed, you can use them offline from any web page.
