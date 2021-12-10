@@ -44,7 +44,8 @@ GPXTRKX_LENGTH=len(GPXTRKX_TEXT)
 #  chunk_size - integer less than 1e6; must be <1MB per Chrome spec
 #  debug [optional] - True or False to enable logging file
 
-iniFile=os.path.join(os.path.dirname(os.path.realpath(__file__)),'gpsio-host.ini')
+hostdir=os.path.dirname(os.path.realpath(__file__))
+iniFile=os.path.join(hostdir,'gpsio-host.ini')
 if not os.path.isfile(iniFile):
     sys.exit("specified .ini file "+iniFile+" not found; aborting")
 
@@ -368,19 +369,47 @@ def transfer_gmsm(cmd,data,drive,options):
             import glob
             gpxlocaldir='/tmp/gpsio-gpxtmp'
             shutil.rmtree(gpxlocaldir,ignore_errors=True)
-            osacmd='tell application "Terminal" to do script "/Library/GPSIO/gpsio-host-macfile.py both '+gpxdir+' '+gpxlocaldir+' \''+json.dumps(options).replace('"','\\"')+'\'"'
-            log('about to call osascript with command:\n'+osacmd)
-            subprocess.run(['osascript','-e',osacmd],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL)
+
+            # build the osa script file from the template
+            with open(os.path.join(hostdir,'gpsio-osa1_template.txt'),'r') as f:
+                fdata=f.read()
+            fdata=fdata.replace('SCRIPTFILE',os.path.join(hostdir,'gpsio-host-macfile.py'))
+            fdata=fdata.replace('GPXDIR',gpxdir)
+            fdata=fdata.replace('TARGETDIR',gpxlocaldir)
+            fdata=fdata.replace('OPTIONS',json.dumps(options).replace('"','\\"'))
+            with open('/tmp/gpsio-osa1.txt','w') as f:
+                f.write(fdata)
+
+            subprocess.run(['osascript','/tmp/gpsio-osa1.txt'],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL)
 
             # subprocess waits for command completion, but in this case osascript is complete
             # before gpsio-host-macfile.py is complete, and before the temp dir is populated;
             # so, wait here in python until the json file exists,
-            # which indicates the directory has been full populated.
+            # which indicates the directory has been full populated.  Do this in two stages: the directory
+            # should be created almost immediately, but the file transfers could take a while; timeout after 20 seconds.
             totalSleep=0
             slp=0.1
-            while not os.path.isfile(gpxlocaldir+'/gpxfiles.json') and totalSleep<5:
+            while not os.path.isdir(gpxlocaldir) and totalSleep<2:
                 time.sleep(slp)
                 totalSleep+=slp
+            if not os.path.isdir(gpxlocaldir):
+                log('Unexcpected timeout: GPX local directory was never created.')
+                send_message({'cmd': cmd, 'status': 'error', 'message': 'Unexcpected timeout: GPX local directory was never created.' })
+                sys.exit()
+
+            totalSleep=0
+            while not os.path.isfile(gpxlocaldir+'/gpxfiles.json') and totalSleep<20:
+                time.sleep(slp)
+                totalSleep+=slp
+            if not os.path.isfile(gpxlocaldir+'/gpxfiles.json'):
+                log('Unexcpected timeout: GPX index file was never created.')
+                send_message({'cmd': cmd, 'status': 'error', 'message': 'Unexcpected timeout: GPX index file was never created.' })
+                sys.exit()
+
+            os.remove('/tmp/gpsio-osa1.txt')
+
+            # close the window spawned by the first osascript call above
+            subprocess.run(['osascript',hostdir+'/gpsio-osa2.txt'],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL)
 
             gpx_files=[os.path.join(gpxlocaldir,f) for f in glob.glob(gpxlocaldir+'/*.[Gg][Pp][Xx]')]
             log('final gpx_files:\n'+str(gpx_files))
