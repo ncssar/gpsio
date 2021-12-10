@@ -36,8 +36,9 @@ def both(gpxdir,targetDir,options):
     os.makedirs(targetDir,exist_ok=True)
     options=json.loads(options)
     jsonfile=targetDir+'/gpxfiles.json'
-    scan(gpxdir,jsonfile)
-    with open(jsonfile,'r') as jf:
+    jsonfiletmp=jsonfile+'.tmp'
+    scan(gpxdir,jsonfiletmp) # renamed to .json at the very end
+    with open(jsonfiletmp,'r') as jf:
         j=json.load(jf)
     gpx_files=j.keys()
     timeDict={}
@@ -81,6 +82,7 @@ def both(gpxdir,targetDir,options):
 
     print('final gpx_files:'+str(gpx_files))
     cpLocal(targetDir,*gpx_files)
+    os.rename(jsonfiletmp,jsonfile) # do this at the very end to signal that the target dir is fully populated
 
 
 if len(sys.argv)<4:

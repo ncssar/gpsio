@@ -20,7 +20,8 @@
 #  comment out previous version# lines here as a version history
 # change descriptions are listed in popup.js
 ##########################################################################
-version='1.1.0' # 11-26-21 - TMG - first use of host version#
+# version='1.1.0' # 11-26-21 - TMG - first use of host version#
+version='1.2.0' # 12-10-21 - TMG - seeveral mac bug fixes
 ##########################################################################
 
 import struct
@@ -28,13 +29,13 @@ import subprocess
 import sys
 import json
 import os
-import mmap
 import time
 import re
 import configparser
+import shutil
 
 GDXML_FILENAME="Garmin/GarminDevice.xml"
-GPXTRKX_TEXT=b'xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"'
+GPXTRKX_TEXT='xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"'
 GPXTRKX_LENGTH=len(GPXTRKX_TEXT)
 
 # read a user-configurable options file gpsio-host.ini
@@ -43,14 +44,7 @@ GPXTRKX_LENGTH=len(GPXTRKX_TEXT)
 #  chunk_size - integer less than 1e6; must be <1MB per Chrome spec
 #  debug [optional] - True or False to enable logging file
 
-# iniFile=False
-# iniFileSearchList=['./gpsio-host.ini','../gpsio-host.ini','../../gpsio-host.ini']
-# for f in iniFileSearchList:
-#     if os.path.exists(f):
-#         iniFile=f
-#         break
-
-iniFile='./gpsio-host.ini'
+iniFile=os.path.join(os.path.dirname(os.path.realpath(__file__)),'gpsio-host.ini')
 if not os.path.isfile(iniFile):
     sys.exit("specified .ini file "+iniFile+" not found; aborting")
 
@@ -61,6 +55,10 @@ config.read(iniFile)
 debug=config['gpsio-host']['debug']
 chunk_size=int(config['gpsio-host']['chunk_size'])
 gpsbabel_exe=config['gpsio-host']['gpsbabel_exe']
+
+def log(message):
+    if debug:
+        logfile.write(message+'\n')
 
 # write debug files, if any, to cross-platform user's home directory
 debug_path=os.path.expanduser("~")
@@ -87,7 +85,7 @@ if not os.path.isfile(gpsbabel_exe):
 # reopen stdout and stdin in bytes mode for all platforms
 try:
     # required to avoid crazy surrogate encoding errors on mac
-    # w+b causes errorson mac; wb works as excpected on windows and mac
+    # w+b causes errors on mac; wb works as excpected on windows and mac
     sys.stdout=os.fdopen(sys.stdout.fileno(),'wb')
 except Exception as e:
     logfile.write('stdout reopen error:'+str(e)+'\n')
@@ -125,14 +123,20 @@ def send_message(message):
     for chunk in chunk_array:
         json_chunk=json.dumps(chunk)
         json_chunklen=len(json_chunk)
-        json_chunklen_bytes=struct.pack('I',json_chunklen)
+        json_chunklen_bytes=struct.pack('@I',json_chunklen)
         if debug:
             logfile.write("CHUNK:"+chunk+"\n")
             logfile.write(" JSON:"+json_chunk+"\n")
         z=sys.stdout.write(json_chunklen_bytes)
-        sys.stdout.flush()
+        try: # flush is not strictly necessary but will fail if the pipe was broken for any reason
+            sys.stdout.flush()
+        except Exception as e:
+            log('ERR:'+str(e))
         z=sys.stdout.write(json_chunk.encode('latin-1'))
-        sys.stdout.flush()
+        try: # flush is not strictly necessary but will fail if the pipe was broken for any reason
+            sys.stdout.flush()
+        except Exception as e:
+            log('ERR:'+str(e))
 
 
 def Main():
@@ -209,7 +213,7 @@ def Main():
     if cmd == "ping-host":
         send_message({'cmd': 'ping-host', 'status': 'ok', 'version': version})
         sys.exit()
-        
+
     # differentiate by GPS brand and protocol
     if "target" in rq:
         target=rq["target"]
@@ -243,21 +247,48 @@ def Main():
         logfile.write("rq.target:"+target+"\n")
 
 # ensure_gpxtrkx: if needed, add 'xmlns:gpxtrkx...' to the original file
+# mmap is nice because it modifies the file in place rather than
+#  needing to make a new temp file, but, it isn't portable
+#  (mmap.resize doesn't exist on mac) and gpsio better already have
+#  permission to write files, so, do it using 'standard' python read and write
 def ensure_gpxtrkx(filename):
     logfile.write("Checking "+filename+" for 'xmlns:gpxtrkx' ... ")
+    found=False
     with open(filename,mode='r+',encoding='utf-8') as f:
-        with mmap.mmap(f.fileno(),0,access=mmap.ACCESS_WRITE) as mm:
-            if mm.find(b'xmlns:gpxtrkx')<0:
-                logfile.write("not found in original file.")
-                orig_size=mm.size()
-                offset=mm.find(b'xmlns:')
-                mm.resize(orig_size+GPXTRKX_LENGTH+1)
-                mm.move(offset+GPXTRKX_LENGTH+1,offset,orig_size-offset)
-                mm.seek(offset)
-                mm.write(GPXTRKX_TEXT+b' ')
-                logfile.write("  Inserted at offset "+str(offset)+"\n")
-            else:
-                logfile.write("found.\n")
+        for line in f:
+            if 'xmlns:gpxtrkx' in line:
+                found=True
+                break
+    if found:
+        logfile.write('found.\n')
+    else:
+        logfile.write('not found.  Adding...\n')
+    
+    if not found:
+        tmpname=filename+'.tmp'
+        with open(tmpname,'w') as outfile:
+            with open(filename,mode='r+',encoding='utf-8') as infile:
+                for line in infile:
+                    if '<gpx' in line:
+                        i=0
+                        pad=''
+                        try:
+                            i=line.index('xmlns:')
+                        except:
+                            try:
+                                i=line.index('creator')
+                            except:
+                                try:
+                                    i=line.index('version')
+                                except:
+                                    i=line.index('>')
+                                    pad=' '
+                        if i>0:
+                            outline=line[:i]+pad+GPXTRKX_TEXT+line[i-1:]
+                    else:
+                        outline=line
+                    outfile.write(outline)
+        os.replace(tmpname,filename)
 
 # step 1: find the connected device (i.e. the connected drive)
 #  return value: full filename of the first <drive>:\Garmin\GarminDevice.xml
@@ -274,7 +305,7 @@ def scan_for_gmsm():
         vols = os.listdir('/Volumes')
         for vol in vols:
             if debug:
-                logfile.write(os.path.join('/Volumes', vol, GDXML_FILENAME) + "\n")
+                logfile.write('Checking for '+os.path.join('/Volumes', vol, GDXML_FILENAME) + "\n")
             if os.path.exists(os.path.join('/Volumes', vol, GDXML_FILENAME)):
                 return os.path.join('/Volumes', vol)
     else:
@@ -330,59 +361,92 @@ def transfer_gmsm(cmd,data,drive,options):
         # 1. get a list of .gpx files to import
         # start with a list of all .gpx files recursively under Garmin/GPX
         gpx_files=[]
-        for root, dirs, files in os.walk(os.path.join(drive,'Garmin','GPX')):
-            for file in files:
-                if file.upper().endswith(".GPX") and not(file.startswith(".")):
-                    fullpath=os.path.join(root,file)
-                    ensure_gpxtrkx(fullpath)
-                    gpx_files.append(fullpath)
+        gpxdir=os.path.join(drive,'Garmin','GPX')
+        if debug:
+            logfile.write("Checking recursively for .gpx files, starting at "+gpxdir+"\n")
+        if darwin:
+            import glob
+            gpxlocaldir='/tmp/gpsio-gpxtmp'
+            shutil.rmtree(gpxlocaldir,ignore_errors=True)
+            osacmd='tell application "Terminal" to do script "/Library/GPSIO/gpsio-host-macfile.py both '+gpxdir+' '+gpxlocaldir+' \''+json.dumps(options).replace('"','\\"')+'\'"'
+            log('about to call osascript with command:\n'+osacmd)
+            subprocess.run(['osascript','-e',osacmd],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL)
 
-        # reverse chronological sort (most recent file is first in the list)
-        gpx_files=sorted(gpx_files,key=os.path.getmtime,reverse=True)
-        totalFileCount=len(gpx_files)
+            # subprocess waits for command completion, but in this case osascript is complete
+            # before gpsio-host-macfile.py is complete, and before the temp dir is populated;
+            # so, wait here in python until the json file exists,
+            # which indicates the directory has been full populated.
+            totalSleep=0
+            slp=0.1
+            while not os.path.isfile(gpxlocaldir+'/gpxfiles.json') and totalSleep<5:
+                time.sleep(slp)
+                totalSleep+=slp
+
+            gpx_files=[os.path.join(gpxlocaldir,f) for f in glob.glob(gpxlocaldir+'/*.[Gg][Pp][Xx]')]
+            log('final gpx_files:\n'+str(gpx_files))
+            gj={}
+            try:
+                with open(gpxlocaldir+'/gpxfiles.json') as gjf:
+                    gj=json.load(gjf)
+            except Exception as e:
+                log(str(e))
+            totalFileCount=len(gj.keys())
+        else:
+            for root, dirs, files in os.walk(gpxdir):
+                for file in files:
+                    if file.upper().endswith(".GPX") and not(file.startswith(".")):
+                        fullpath=os.path.join(root,file)
+                        gpx_files.append(fullpath)
+
+            # reverse chronological sort (most recent file is first in the list)
+            gpx_files=sorted(gpx_files,key=os.path.getmtime,reverse=True)
+            totalFileCount=len(gpx_files)
+            
+            if totalFileCount == 0:
+                if debug:
+                    logfile.write("No GPX files were found on the device.\n")
+                send_message({'cmd': cmd, 'status': 'error', 'message': 'No GPX files were found on the device.' })
+                sys.exit()
+
+            # apply file filtering as specified in the extension options
+            if "method" in options:
+                if options["method"]=="recent" and "recentSel" in options:
+                    # only get files m thru n (both are one-based) from the sorted list
+                    #  (set m=1 by default; not currently specified in the options;
+                    #    leave it here for forward compatibility using 'recentSelFirst')
+                    m=1
+                    if "recentSelFirst" in options:
+                        m=int(options["recentSelFirst"])
+                    n=int(options["recentSel"])
+
+                    # make sure 1<=n<=totalFileCount
+                    n=max(1,min(n,totalFileCount))
+                    # then make sure 1<=m<=n
+                    m=max(1,min(m,n))
+                    
+                    if debug:
+                        logfile.write("Selecting files "+str(m)+" thru "+str(n)+" from a reverse-chronological-order sorted list...\n")
+                    gpx_files=gpx_files[m-1:n]
+                    
+                if options["method"]=="time" and "timeSel" in options:
+                    currentTime=time.time()
+                    if debug:
+                        logfile.write("Filtering out files older than "+options["timeSel"]+" hours...\n")
+                    gpx_files=[f for f in gpx_files if (currentTime-os.path.getmtime(f))/3600<int(options["timeSel"])]    
+
+            if "size" in options:                
+                if options["size"]==True and "sizeSel" in options:
+                    if debug:
+                        logfile.write("Filtering out files larger than "+options["sizeSel"]+"...\n")
+                    # as long as sizeSel is in the format of <n>kb or <n>mb (case does not matter)
+                    #  then the following line will filter correctly, i.e. '10kB' or '5MB'
+                    gpx_files=[f for f in gpx_files if (os.path.getsize(f)<eval(options["sizeSel"].lower().replace("kb","*1024").replace("mb","*1048576")))]
+
+        # end of platform-dependent scan-and-filter(-and-copy for mac)
         
-        if totalFileCount == 0:
-            if debug:
-                logfile.write("No GPX files were found on the device.\n")
-            send_message({'cmd': cmd, 'status': 'error', 'message': 'No GPX files were found on the device.' })
-            sys.exit()
+        for f in gpx_files:
+            ensure_gpxtrkx(f)
 
-        # apply file filtering as specified in the extension options
-        if "method" in options:
-            if options["method"]=="recent" and "recentSel" in options:
-                # only get files m thru n (both are one-based) from the sorted list
-                #  (set m=1 by default; not currently specified in the options;
-                #    leave it here for forward compatibility using 'recentSelFirst')
-                m=1
-                if "recentSelFirst" in options:
-                    m=int(options["recentSelFirst"])
-                n=int(options["recentSel"])
-
-                # make sure 1<=n<=totalFileCount
-                n=max(1,min(n,totalFileCount))
-                # then make sure 1<=m<=n
-                m=max(1,min(m,n))
-                
-                if debug:
-                    logfile.write("Selecting files "+str(m)+" thru "+str(n)+" from a reverse-chronological-order sorted list...\n")
-                gpx_files=gpx_files[m-1:n]
-                
-            if options["method"]=="time" and "timeSel" in options:
-                currentTime=time.time()
-                if debug:
-                    logfile.write("Filtering out files older than "+options["timeSel"]+" hours...\n")
-                gpx_files=[f for f in gpx_files if (currentTime-os.path.getmtime(f))/3600<int(options["timeSel"])]    
-
-        if "size" in options:                
-            if options["size"]==True and "sizeSel" in options:
-                if debug:
-                    logfile.write("Filtering out files larger than "+options["sizeSel"]+"...\n")
-                # as long as sizeSel is in the format of <n>kb or <n>mb (case does not matter)
-                #  then the following line will filter correctly, i.e. '10kB' or '5MB'
-                gpx_files=[f for f in gpx_files if (os.path.getsize(f)<eval(options["sizeSel"].lower().replace("kb","*1024").replace("mb","*1048576")))]
-
-        # end of filtering
-        
         # list the filtered file set
         filteredFileCount=len(gpx_files)
         if filteredFileCount == 0:
