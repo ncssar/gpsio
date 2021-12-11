@@ -35,8 +35,6 @@ import configparser
 import shutil
 
 GDXML_FILENAME="Garmin/GarminDevice.xml"
-GPXTRKX_TEXT='xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"'
-GPXTRKX_LENGTH=len(GPXTRKX_TEXT)
 
 # read a user-configurable options file gpsio-host.ini
 #  which sets these values in the 'gpsio-host' section:
@@ -247,17 +245,17 @@ def Main():
         logfile.write("rq.cmd:"+cmd+"\n")
         logfile.write("rq.target:"+target+"\n")
 
-# ensure_gpxtrkx: if needed, add 'xmlns:gpxtrkx...' to the original file
+# ensure_xmlns: if needed, add namespace definitions like 'xmlns:gpxtrkx...'
 # mmap is nice because it modifies the file in place rather than
-#  needing to make a new temp file, but, it isn't portable
+#  needing to make a new temp file, but, it isn't truly portable
 #  (mmap.resize doesn't exist on mac) and gpsio better already have
 #  permission to write files, so, do it using 'standard' python read and write
-def ensure_gpxtrkx(filename):
-    logfile.write("Checking "+filename+" for 'xmlns:gpxtrkx' ... ")
+def ensure_xmlns(filename,name,text):
+    logfile.write("Checking "+filename+" for 'xmlns:"+name+"' ... ")
     found=False
     with open(filename,mode='r+',encoding='utf-8') as f:
         for line in f:
-            if 'xmlns:gpxtrkx' in line:
+            if 'xmlns:'+name in line:
                 found=True
                 break
     if found:
@@ -272,7 +270,8 @@ def ensure_gpxtrkx(filename):
                 for line in infile:
                     if '<gpx' in line:
                         i=0
-                        pad=''
+                        pad1=''
+                        pad2=' '
                         try:
                             i=line.index('xmlns:')
                         except:
@@ -283,9 +282,10 @@ def ensure_gpxtrkx(filename):
                                     i=line.index('version')
                                 except:
                                     i=line.index('>')
-                                    pad=' '
+                                    pad1=' '
+                                    pad2=''
                         if i>0:
-                            outline=line[:i]+pad+GPXTRKX_TEXT+line[i-1:]
+                            outline=line[:i]+pad1+text+pad2+line[i:]
                     else:
                         outline=line
                     outfile.write(outline)
@@ -474,7 +474,8 @@ def transfer_gmsm(cmd,data,drive,options):
         # end of platform-dependent scan-and-filter(-and-copy for mac)
         
         for f in gpx_files:
-            ensure_gpxtrkx(f)
+            ensure_xmlns(f,'gpxtrkx','xmlns:gpxtrkx="http://www.garmin.com/xmlschemas/TrackStatsExtension/v1"')
+            ensure_xmlns(f,'gpxx','xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"')
 
         # list the filtered file set
         filteredFileCount=len(gpx_files)
