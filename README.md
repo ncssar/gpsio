@@ -2,17 +2,21 @@
 
 # GPSIO Extension
 
-GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages (primarily CalTopo and SARTopo) and Garmin GPS devices.
+GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages and GPS devices.
+
+While GPSIO is originally intended for use with CalTopo.com, SARTopo.com, and CalTopo Desktop (the offline version of CalTopo and SARTopo), it could be applied to other web pages.
 
 | Installer              | Download          |
 | :--------------------- | :---------------- |
 | Windows Installer      | [install-gpsio.exe](https://github.com/ncssar/gpsio/raw/master/installer/install-gpsio.exe) |
-| MacOS Installer        | Coming Soon       |
+| MacOS Installer        | [gpsio.pkg](https://github.com/ncssar/gpsio/raw/master/installer/gpsio.pkg) |
 | Linux Installer        | Testers needed    |
 
 GPSIO is a replacement for the Garmin Communicator plugin, built on open web standards.  It was created around the time that web browsers stopped supporting NPAPI Plugins such as Garmin Communicator (2016-2017), with a transfer of ownership in 2020/2021 and new browser extensions (with new extension IDs) starting in November 2021.
 
-Supported browsers are Chrome, Firefox, and Edge. Supported OSs are Mac, Windows and (soon) Linux, though currently there is only a Windows installer.  The Mac installer is in progress; until it is available, you will need to follow the 'Manual Installation' procedure below.
+Currently, only Garmin handheld devices are supported, but that could change in the future.
+
+Supported browsers are Chrome, Firefox, and Edge. Supported OSs are MacOS, Windows, and (soon) Linux.
 
 ## Updating the Host
 Did the extension tell you that a new version of the host is available?  For now, updating the host involves copying the latest version of gpsio-host.py (in the 'host' directory above) to your computer.  Soon, a host-only updater program will be available.
@@ -22,7 +26,19 @@ The only part of GPSIO that the user normally sees is the transfer method select
 
 
 # Installing GPSIO
-A Windows installer (using Nullsoft Scriptable Install System) is available above.  Until installers for MacOS and Linux are published, please follow the manual installation process:
+Installers for Windows and MacOS are available above.  For linux, or if the installers don't work for whatever reason, you can follow this manual installation procedure.
+
+## MacOS installation notes
+
+For MacOS, you may see this during installation if you have an external drive plugged in:
+
+<img src="img/mac_installer_removable_access.png" width="400px">
+
+You can safely answer "Don't Allow".  The installer does not actually need access to the external drive.
+
+(Later, you may be asked for access to external drives when you actually use GPSIO - you DO need to allow that access, since modern Garmin GPSes are actually external drives; see 'GMSM' below.)
+
+The installer will tell you that over 80MB of space is required.  That's only true if you don't already have GPSBabel installed.  If you already have GPSBabel installed, the installation size is much less than 1MB.
 
 ## Manual installation
 
