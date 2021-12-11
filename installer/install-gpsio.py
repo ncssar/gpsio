@@ -570,5 +570,10 @@ if LOG_DIR!=HOST_DIR:
 if darwin: # need to do the cleanup here for mac; NSIS does cleanup for Windows
     if os.path.isdir(INSTALL_TMP):
         shutil.rmtree(INSTALL_TMP)
+    # open the follow-up web page, in chrome if possible
+    import webbrowser
+    webbrowser.get('chrome').open_new_tab('https://github.com/ncssar/gpsio#extensions---installation-follow-up-and-details')
+    # now raise the installer window on top again
+    subprocess.run(['osascript','-e','tell application "Installer" to activate'])
 
 sys.exit(0) # required for mac pkgbuild postinstall script

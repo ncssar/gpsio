@@ -1,8 +1,13 @@
+# source this script from a terminal in the repository's installer dir to rebuild the mac .pkg installer file
+#  - assembles host files, script, and prerequisites
+#  - invokes pkgbuild
+/bin/rm -rf pkgbuild_root
+/bin/rm -rf pkgbuild_scripts
 /bin/mkdir pkgbuild_root
 /bin/mkdir pkgbuild_root/host
 /bin/mkdir pkgbuild_scripts
-/bin/cp -f ../host/gpsio-host.py pkgbuild_root/host
-/bin/cp -f ../host/gpsio-host.ini pkgbuild_root/host
+/bin/cp -f ../host/common/*.* pkgbuild_root/host
+/bin/cp -f ../host/mac/*.* pkgbuild_root/host
 /bin/cp -f install-gpsio.py pkgbuild_scripts/postinstall
 /bin/cp -f prerequisites/common/*.* pkgbuild_root
 /bin/cp -f prerequisites/mac/*.* pkgbuild_root
