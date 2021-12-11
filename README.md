@@ -12,6 +12,10 @@ While GPSIO is originally intended for use with CalTopo.com, SARTopo.com, and Ca
 | MacOS Installer        | [gpsio.pkg](https://github.com/ncssar/gpsio/raw/master/installer/gpsio.pkg) |
 | Linux Installer        | Testers needed    |
 
+> **INSTALLER SECURITY NOTES:** Like many installers, this installer will probably be blocked or flagged as "from an unidentified developer".  On Mac, you will need to locate the downloaded file in Finder, then hold down Control (not Command) when you click gpsio.pkg, select 'Open' from the file's menu, and answer 'Open' when prompted with the security warning - this will add it as a security execption [(see Apple's docs here)](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac), and you can delete it after installation is complete.  On Windows, you will need to follow the prompts to 'Run Anyway'.
+
+> In addition, Mac and Windows should both ask for your password so the installer can be run with the necessary permissions, since it edits registry settings, Applications folders, etc.
+
 GPSIO is a replacement for the Garmin Communicator plugin, built on open web standards.  It was created around the time that web browsers stopped supporting NPAPI Plugins such as Garmin Communicator (2016-2017), with a transfer of ownership in 2020/2021 and new browser extensions (with new extension IDs) starting in November 2021.
 
 Currently, only Garmin handheld devices are supported, but that could change in the future.
