@@ -57,10 +57,8 @@ Section "Startup"
     File "prerequisites\common\*.*"
     File "prerequisites\win\*.*"
     SetOutPath "$INSTDIR\host"
-    File /r "..\host\dist"
-    File "..\host\gpsio-host.ini"
-    File "..\host\gpsio-host.bat"
-    File "..\host\gpsio-host.py"
+    File "..\host\common\*.*"
+    File /r "..\host\win\*.*"
     File "README.txt" ; not the same as README.md which is for the GitHub repo page
     SetDetailsPrint both
     ${DetailUpdate} "Extracting required files... Done."
