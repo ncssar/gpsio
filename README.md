@@ -2,17 +2,25 @@
 
 # GPSIO Extension
 
-GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages (primarily CalTopo and SARTopo) and Garmin GPS devices.
+GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages and GPS devices.
+
+While GPSIO is originally intended for use with CalTopo.com, SARTopo.com, and CalTopo Desktop (the offline version of CalTopo and SARTopo), it could be applied to other web pages.
 
 | Installer              | Download          |
 | :--------------------- | :---------------- |
 | Windows Installer      | [install-gpsio.exe](https://github.com/ncssar/gpsio/raw/master/installer/install-gpsio.exe) |
-| MacOS Installer        | Coming Soon       |
+| MacOS Installer        | [gpsio.pkg](https://github.com/ncssar/gpsio/raw/master/installer/gpsio.pkg) |
 | Linux Installer        | Testers needed    |
+
+> **INSTALLER SECURITY NOTES:** Like many installers, this installer will probably be blocked or flagged as "from an unidentified developer".  On Mac, you will need to locate the downloaded file in Finder, then hold down Control (not Command) when you click gpsio.pkg, select 'Open' from the file's menu, and answer 'Open' when prompted with the security warning - this will add it as a security execption [(see Apple's docs here)](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac), and you can delete it after installation is complete.  On Windows, you will need to follow the prompts to 'Run Anyway'.
+
+> In addition, Mac and Windows should both ask for your password so the installer can be run with the necessary permissions, since it edits registry settings, Applications folders, etc.
 
 GPSIO is a replacement for the Garmin Communicator plugin, built on open web standards.  It was created around the time that web browsers stopped supporting NPAPI Plugins such as Garmin Communicator (2016-2017), with a transfer of ownership in 2020/2021 and new browser extensions (with new extension IDs) starting in November 2021.
 
-Supported browsers are Chrome, Firefox, and Edge. Supported OSs are Mac, Windows and (soon) Linux, though currently there is only a Windows installer.  The Mac installer is in progress; until it is available, you will need to follow the 'Manual Installation' procedure below.
+Currently, only Garmin handheld devices are supported, but that could change in the future.
+
+Supported browsers are Chrome, Firefox, and Edge. Supported OSs are MacOS, Windows, and (soon) Linux.
 
 ## Updating the Host
 Did the extension tell you that a new version of the host is available?  For now, updating the host involves copying the latest version of gpsio-host.py (in the 'host' directory above) to your computer.  Soon, a host-only updater program will be available.
@@ -22,7 +30,19 @@ The only part of GPSIO that the user normally sees is the transfer method select
 
 
 # Installing GPSIO
-A Windows installer (using Nullsoft Scriptable Install System) is available above.  Until installers for MacOS and Linux are published, please follow the manual installation process:
+Installers for Windows and MacOS are available above.  For linux, or if the installers don't work for whatever reason, you can follow this manual installation procedure.
+
+## MacOS installation notes
+
+For MacOS, you may see this during installation if you have an external drive plugged in:
+
+<img src="img/mac_installer_removable_access.png" width="400px">
+
+You can safely answer "Don't Allow".  The installer does not actually need access to the external drive.
+
+(Later, you may be asked for access to external drives when you actually use GPSIO - you DO need to allow that access, since modern Garmin GPSes are actually external drives; see 'GMSM' below.)
+
+The installer will tell you that over 80MB of space is required.  That's only true if you don't already have GPSBabel installed.  If you already have GPSBabel installed, the installation size is much less than 1MB.
 
 ## Manual installation
 
@@ -123,8 +143,15 @@ Always feel free to contact the developer if you have any questions.
 
 ## F.A.Q
 
+### Q: GPSIO has a LOT of moving parts and seems awfully complicated under the hood.  Is it worth it?
+A: If you are quick and comfortable with navigating the file browser, and all of the GPSes that you will be using mount up as external drives like GMSM, then GPSIO may not be of much or any benefit to you.  Also, the advent of navigation apps (like the CalTopo app), which may eventually limit or get rid of the need for handheld GPS devices, are certainly changing the landscape of things.  We won't be offended if you don't use GPSIO!  The intended benefits are:
+- simplicity, trainability, and usability by a broader target audience: there's no need to interact with the file browser
+- speed: reduction of just a few mouse clicks, repeated over large numbers of GPSes, can be a big time saver
+- filtering: import and export filtering options, in the extension icon popup, aren't available when transfering files directly
+- behind-the-scenes features: files that would not normally be readable by SARTopo or Caltopo due to missing GPX extensions are automatically edited to be comatible [(see details here)](https://github.com/ncssar/gpsio/issues/1)
+
 ### Q: Does the extension use MV3 (Manifest Version 3)?
-A: Chrome has announced its timeline for end-of-life for MV2.  MV3 offers security and performance benefits.  The Chrome and Edge extensions are MV3 (beginning with version 1.0 in November 2021).  Firefox does not support MV3 at the time of writing.  If Firefox does support MV3 in the future, the GPSIO Firefox extension will be redone to match.
+A: Chrome has announced its timeline for end-of-life for MV2.  MV3 reportedly offers security and performance benefits.  The Chrome and Edge extensions are MV3 (beginning with version 1.0 in November 2021).  Firefox does not support MV3 at the time of writing.  If Firefox does support MV3 in the future, the GPSIO Firefox extension will be redone to match.
 
 ### Q: Do I need to be connected to the internet when I run the installer?
 A: Strictly speaking, no you do not.  But, life will be easier if you are.  The installer inserts flags that indicate the extension should be added to the browsers.  Those flags can be set without internet, in which case the extension should automatically be added the next time you start the browser while connected to the internet.  The other components do not need an internet connection, and once the extensions are installed, you can use them offline from any web page.
