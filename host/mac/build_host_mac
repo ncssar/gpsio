@@ -1,0 +1,4 @@
+# source this file to (re)build the mac host application
+rm -rf build
+rm -rf dist
+pyinstaller gpsio-host.spec

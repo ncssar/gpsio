@@ -3,6 +3,7 @@
 *.pyc
 host/build
 host/old
+host/mac/build
 tmp
 extension/gpsio-chrome-extension
 extension/gpsio-firefox-extension

@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-# TODO: Mac
 # TODO: Linux
 
 # install-gpsio.py - attempt to install as many parts of the GPSIO tool
@@ -124,6 +123,10 @@ else:
 LOG_DIR=INSTALL_TMP
 NOTICES_FILE=os.path.join(LOG_DIR,'install-notices.txt') # post-install message box in NSIS
 LOG_FILE=os.path.join(LOG_DIR,'install-log.txt')
+
+
+os.makedirs(INSTALL_TMP,exist_ok=True) # should already be done either by NSIS or by mac installer
+os.makedirs(LOG_DIR,exist_ok=True) # should already be done either by NSIS or by mac installer
 
 def log(t):
     print(t)
@@ -433,8 +436,6 @@ def stage_4():
         if win32:
             for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
                 oschmod.set_mode(f,'a+w')
-        if darwin|linux:
-            os.chmod(os.path.join(HOST_DIR,'gpsio-host.py'),stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH) # 755
     else:
         log('4. Native Host : FAILED')
         ltxt+='\n\nNATIVE HOST INSTALLATION FAILED - the temporary installation directory, which should contain the necessary extracted files, does not exist.'
@@ -452,8 +453,6 @@ def stage_4():
     if win32:
         host_path=host_path.replace('\\','\\\\')
         host_path+='.bat'
-    if darwin|linux:
-        host_path+='.py'
 
     # create directories for host manifests, if needed
     for f in HOST_MANIFEST_FILE.values():
@@ -499,7 +498,7 @@ def stage_4():
 ####################################################################
 if darwin|linux:
     if not os.geteuid() == 0:
-        sys.exit('ERROR: gpsio-init.py must be run as root.')
+        sys.exit('ERROR: install-gpsio.py must be run as root.')
 
 # for Windows, this is called from NSIS, and there will be one argument: stage to run
 # for Mac, this is called from installer, and the arguments will be predetermined by pkgbuild

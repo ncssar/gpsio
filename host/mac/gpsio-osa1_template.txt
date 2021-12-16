@@ -1,5 +1,0 @@
--- Open Script Architecture script used by GPSIO on Mac; do not modify
-tell application "Terminal"
-   do script "echo -e -n \"\\033]0;gpsio-host-macfile\\007\"; 'SCRIPTFILE' both 'GPXDIR' 'TARGETDIR' 'OPTIONS'"
-end tell
-

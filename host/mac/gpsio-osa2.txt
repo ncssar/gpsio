@@ -1,4 +1,0 @@
--- Open Script Architecture script used by GPSIO on Mac; do not modify
-tell application "Terminal"
-   close (every window whose name contains "gpsio-host-macfile")
-end tell
