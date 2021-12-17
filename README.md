@@ -144,11 +144,11 @@ Always feel free to contact the developer if you have any questions.
 ## F.A.Q
 
 ### Q: GPSIO has a LOT of moving parts and seems awfully complicated under the hood.  Is it worth it?
-A: If you are quick and comfortable with navigating the file browser, and all of the GPSes that you will be using mount up as external drives like GMSM, then GPSIO may not be of much or any benefit to you.  Also, the advent of navigation apps (like the CalTopo app), which may eventually limit or get rid of the need for handheld GPS devices, are certainly changing the landscape of things.  We won't be offended if you don't use GPSIO!  The intended benefits are:
+A: If you are quick and comfortable with navigating the file browser, including a quick visual scan of file sizes and modification times, and all of the GPSes that you will be using mount up as external drives like GMSM (above), then GPSIO may not be of much or any benefit to you.  Also, the advent of smartphone navigation apps (like the CalTopo app) -- which limit the need for handheld GPS devices, and may eventually eliminate that need entirely -- is certainly changing the landscape of things.  We won't be offended if you don't use GPSIO!  The intended benefits are:
 - simplicity, trainability, and usability by a broader target audience: there's no need to interact with the file browser
 - speed: reduction of just a few mouse clicks, repeated over large numbers of GPSes, can be a big time saver
 - filtering: import and export filtering options, in the extension icon popup, aren't available when transfering files directly
-- behind-the-scenes features: files that would not normally be readable by SARTopo or Caltopo due to missing GPX extensions are automatically edited to be comatible [(see details here)](https://github.com/ncssar/gpsio/issues/1)
+- behind-the-scenes features: files that would not normally be readable by SARTopo or CalTopo due to missing GPX extensions are automatically edited during import to be compatible [(see details here)](https://github.com/ncssar/gpsio/issues/1)
 
 ### Q: Does the extension use MV3 (Manifest Version 3)?
 A: Chrome has announced its timeline for end-of-life for MV2.  MV3 reportedly offers security and performance benefits.  The Chrome and Edge extensions are MV3 (beginning with version 1.0 in November 2021).  Firefox does not support MV3 at the time of writing.  If Firefox does support MV3 in the future, the GPSIO Firefox extension will be redone to match.
