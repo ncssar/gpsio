@@ -4,7 +4,7 @@
 
 GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages and GPS devices.
 
-While GPSIO is originally intended for use with CalTopo.com, SARTopo.com, and CalTopo Desktop (the offline version of CalTopo and SARTopo), it could be applied to other web pages.
+While GPSIO is originally intended for use with CalTopo.com, SARTopo.com, and CalTopo Desktop (the locally hosted version of CalTopo and SARTopo), it could be applied to other web pages.
 
 | Installer              | Download          |
 | :--------------------- | :---------------- |
@@ -12,9 +12,9 @@ While GPSIO is originally intended for use with CalTopo.com, SARTopo.com, and Ca
 | MacOS Installer        | [gpsio.pkg](https://github.com/ncssar/gpsio/raw/master/installer/gpsio.pkg) |
 | Linux Installer        | Testers needed    |
 
-> **INSTALLER SECURITY NOTES:** Like many installers, this installer will probably be blocked or flagged as "from an unidentified developer".  On Mac, you will need to locate the downloaded file in Finder, then hold down Control (not Command) when you click gpsio.pkg, select 'Open' from the file's menu, and answer 'Open' when prompted with the security warning - this will add it as a security execption [(see Apple's docs here)](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac), and you can delete it after installation is complete.  On Windows, you will need to follow the prompts to 'Run Anyway'.
+> **INSTALLER SECURITY NOTES:** Like many installers, this installer will probably be blocked or flagged as "from an unidentified developer".  On Mac, you will need to locate the downloaded file in Finder, then hold down Control (not Command) when you click gpsio.pkg, select 'Open' from the file's menu, and answer 'Open' when prompted with the security warning - this will add it as a security exception [(see Apple's docs here)](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac), and you can delete it after installation is complete.  On Windows, you will need to follow the prompts to 'Run Anyway'.
 
-> In addition, Mac and Windows should both ask for your password so the installer can be run with the necessary permissions, since it edits registry settings, Applications folders, etc.
+> In addition, Mac and Windows installers may both ask for your password so the installer can be run with the necessary permissions, since it edits registry settings, Applications folders, etc.
 
 GPSIO is a replacement for the Garmin Communicator plugin, built on open web standards.  It was created around the time that web browsers stopped supporting NPAPI Plugins such as Garmin Communicator (2016-2017), with a transfer of ownership in 2020/2021 and new browser extensions (with new extension IDs) starting in November 2021.
 
@@ -23,14 +23,14 @@ Currently, only Garmin handheld devices are supported, but that could change in 
 Supported browsers are Chrome, Firefox, and Edge. Supported OSs are MacOS, Windows, and (soon) Linux.
 
 ## Updating the Host
-Did the extension tell you that a new version of the host is available?  For now, updating the host involves copying the latest version of gpsio-host.py (in the 'host' directory above) to your computer.  Soon, a host-only updater program will be available.
+Did the extension tell you that a new version of the host is available?  Updating the host on Windows involves copying the [latest version of gpsio-host.py](https://github.com/ncssar/gpsio/tree/master/host/common) to your computer's GPSIO host directory, typically C:\Program Files (x86)\GPSIO.  On Mac, you will need to download and run the installer again, or, replace the entire GPSIO host directory on your computer (typically /Library/GPSIO) with [the latest from this repository](https://github.com/ncssar/gpsio/tree/master/host/mac/dist/gpsio-host).  At some point, a host-only updater program will be available.
 
 ## Using GPSIO
 The only part of GPSIO that the user normally sees is the transfer method selection after clicking Export or Import in CalTopo / SARTopo / CalTopo-Desktop.  The user can also click the extension icon, at the top right of the web browser, to show and modify the GPSIO data filter settings.  See below for more details.
 
 
 # Installing GPSIO
-Installers for Windows and MacOS are available above.  For linux, or if the installers don't work for whatever reason, you can follow this manual installation procedure.
+Installers for Windows and MacOS are available above.  These installers are meant to encompass all of the manual installation steps listed below.  For linux, or if the installers don't work for whatever reason, you can follow this manual installation procedure.
 
 ## MacOS installation notes
 
@@ -40,9 +40,9 @@ For MacOS, you may see this during installation if you have an external drive pl
 
 You can safely answer "Don't Allow".  The installer does not actually need access to the external drive.
 
-(Later, you may be asked for access to external drives when you actually use GPSIO - you DO need to allow that access, since modern Garmin GPSes are actually external drives; see 'GMSM' below.)
+(Later, you may be asked for access to external drives the first time you actually use GPSIO - you DO need to allow that access, since modern Garmin GPSes are actually external drives; see 'GMSM' below.)
 
-The installer will tell you that over 80MB of space is required.  That's only true if you don't already have GPSBabel installed.  If you already have GPSBabel installed, the installation size is much less than 1MB.
+The installer will tell you that over 90MB of space is required.  That's only true if you don't already have GPSBabel installed.  If you already have GPSBabel installed, the installation size is around 12MB.
 
 ## Manual installation
 
@@ -53,17 +53,17 @@ The GPSIO browser extension is published for Chrome, Firefox, and Edge.  This is
 - Edge: [gpsio at Edge AddOns](https://microsoftedge.microsoft.com/addons/detail/gpsio/gnonahdiojppiacfbalpgjddpkfepihk)
 
 ### 2. Install GPSBabel
-GPSBabel is a free open-source program for working with GPSs and GPS data (consider making a donation). Click [here](http://www.gpsbabel.org/download.html) to download.  The native host makes calls to GPSBabel.
+GPSBabel is a free open-source program for working with GPSs and GPS data (consider making a donation). Click [here](http://www.gpsbabel.org/download.html) to download.  The native host makes calls to GPSBabel in the background.
 
 ### 3. For Windows: Install Garmin USB drivers
 The latest Garmin USB drivers are available [here](https://www8.garmin.com/support/download_details.jsp?id=591). For USB-mode devices (Garmin 60 or similar non-mass-storage-mode devices), you can run Windows Device Manager to verify the driver installation: if the drivers are installed properly, a plugged-in Garmin USB-mode device will show up in a category named "Garmin Devices"; if the drivers are not installed, a plugged-in Garmin USB-mode device will show up as "Unknown USB Device", causing CalTopo GPSIO transfers to abort with a red line of text indicating that no GPS was found. (Mass-storage-mode devices such as Garmin 62, 64, etc. will instead show up under 'Drives' and/or 'Portable Devices'.)
 
 ### 4. Install the native host application
-The host uses Python 3.  On Mac and Linux computers, Python 3 should already be installed.  On Windows, previous versions of the host required you to install Python separately, but the current versions do not, since the compact embeddable Python core is part of the GPSIO installation.
+The host uses Python 3.  A minimal installation of Python 3 is included in the Windows and Mac installers, so you do not need to install Python separately.  (Previous Windows versions of the GPSIO host did require you to install Python separately.)
 
 In Windows, the host is a batch file (gpsio-host.bat) that invokes a Python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the host directory above.
 
-The browser extensions need to know where the actual native host files are located on your computer.  The GPSIO installer will take care of this for you.  If you need to do this step by hand, the methods for doing this are documented in the various browser development documents, and are different for Windows vs. Mac.  While the installers are under construction, please contact the developer if you need help setting this up.
+The browser extensions need to know where the actual native host executable is located on your computer.  This mapping is done by the 'Native Messaging Host Manifest' files.  The GPSIO installer will create these files for you.  If you need to do create the manifests by hand, refer to the various browser development documents.  Please contact the developer if you need help setting this up.
 
 
 ## Extensions - Installation Follow-up and Details
@@ -72,7 +72,7 @@ The browser extensions need to know where the actual native host files are locat
 
 If you have the old version of the GPSIO extension installed, you will want to remove it from your browser.  You can do this from the menu that appears when you right-click the old extension icon.
 
-The installer ***attempts*** to add the latest GPSIO extension to your web browsers.  Even if the attempt worked, there are a few reasons you may not see the new extension right away.  If you determine that the extension was not added by the installer, see [the links above](https://github.com/ncssar/gpsio/blob/master/README.md#1-install-the-gpsio-web-browser-extension) to add the extension to your browser directly.
+Due to browser security restrictions, the installer only ***attempts*** to add the latest GPSIO extension to your web browser(s).  Even if the attempts work, there are a few reasons you may not see the new extension icon right away.  After reading these notes, if you determine that the extension was not added by the installer, see [the links above](https://github.com/ncssar/gpsio/blob/master/README.md#1-install-the-gpsio-web-browser-extension) to add the extension to your browser directly.
 
 On Mac and Linux, you may not even see an entry for gpsio in the Manage Extensions page, until you restart your web browser.
 
@@ -92,7 +92,7 @@ Click 'gpsio added to Firefox' which should prompt you to enable the extension.
 
 ### Extension permissions
 When the GPSIO extension is about to be added to your web browser, you will be told that it needs two types of permission that may sound daunting.  Why are these permissions needed?
-1. Read and change all your data on all websites - Originally, the extension was limited to only be usable on sartopo.com and caltopo.com.  With the advent of CalTopo Desktop, the host machine name - therefore the web page domain name - could be anything (localhost, myMapServer, 192.168.200.200, etc.).  While the permission sounds scary, the extension only transfers GPS data - but it can be used on any web page.
+1. Read and change all your data on all websites - Originally, the extension was limited to only be usable on sartopo.com and caltopo.com.  With the advent of CalTopo Desktop (formerly SARTopo Offline, formerly SARSoft), the host machine name - therefore the web page domain name - could be anything (localhost, myMapServer, 192.168.200.200, etc.).  While this permission sounds scary, the extension only transfers GPS data - but it can be used on any web page.
 2. Communicate with cooperating native applications - This Native Messaging is explained below in 'GPSIO Architecture'.  The extension only communicates with the official GPSIO host application.
 
 
@@ -144,11 +144,11 @@ Always feel free to contact the developer if you have any questions.
 ## F.A.Q
 
 ### Q: GPSIO has a LOT of moving parts and seems awfully complicated under the hood.  Is it worth it?
-A: If you are quick and comfortable with navigating the file browser, and all of the GPSes that you will be using mount up as external drives like GMSM, then GPSIO may not be of much or any benefit to you.  Also, the advent of navigation apps (like the CalTopo app), which may eventually limit or get rid of the need for handheld GPS devices, are certainly changing the landscape of things.  We won't be offended if you don't use GPSIO!  The intended benefits are:
+A: If you are quick and comfortable with navigating the file browser, including a quick visual scan of file sizes and modification times, and all of the GPSes that you will be using mount up as external drives like GMSM (above), then GPSIO may not be of much or any benefit to you.  Also, the advent of smartphone navigation apps (like the CalTopo app) -- which limit the need for handheld GPS devices, and may eventually eliminate that need entirely -- is certainly changing the landscape of things.  We won't be offended if you don't use GPSIO!  The intended benefits are:
 - simplicity, trainability, and usability by a broader target audience: there's no need to interact with the file browser
 - speed: reduction of just a few mouse clicks, repeated over large numbers of GPSes, can be a big time saver
 - filtering: import and export filtering options, in the extension icon popup, aren't available when transfering files directly
-- behind-the-scenes features: files that would not normally be readable by SARTopo or Caltopo due to missing GPX extensions are automatically edited to be comatible [(see details here)](https://github.com/ncssar/gpsio/issues/1)
+- behind-the-scenes features: files that would not normally be readable by SARTopo or CalTopo due to missing GPX extensions are automatically edited during import to be compatible [(see details here)](https://github.com/ncssar/gpsio/issues/1)
 
 ### Q: Does the extension use MV3 (Manifest Version 3)?
 A: Chrome has announced its timeline for end-of-life for MV2.  MV3 reportedly offers security and performance benefits.  The Chrome and Edge extensions are MV3 (beginning with version 1.0 in November 2021).  Firefox does not support MV3 at the time of writing.  If Firefox does support MV3 in the future, the GPSIO Firefox extension will be redone to match.
