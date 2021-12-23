@@ -11,3 +11,4 @@ extension/gpsio-edge-extension
 installer/pkgbuild_root
 installer/pkgbuild_scripts
 .DS_Store
+installer/install-gpsio.spec
