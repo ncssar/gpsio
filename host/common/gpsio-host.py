@@ -28,6 +28,7 @@ import os
 import time
 import re
 import configparser
+import logging
 import shutil
 
 GDXML_FILENAME="Garmin/GarminDevice.xml"
@@ -37,44 +38,92 @@ GDXML_FILENAME="Garmin/GarminDevice.xml"
 #  gpsbabel_exe - full filename of the gpsbabel executable file
 #  chunk_size - integer less than 1e6; must be <1MB per Chrome spec
 #  debug [optional] - True or False to enable logging file
+#  errlogdepth [optional] - number of error logs to keep - default=5
 
 hostdir=os.path.dirname(os.path.realpath(__file__))
 iniFile=os.path.join(hostdir,'gpsio-host.ini')
 if not os.path.isfile(iniFile):
     sys.exit("specified .ini file "+iniFile+" not found; aborting")
 
-debug=False # initialize the value to make the IDE happy - override in gpsio.ini
-
 config=configparser.ConfigParser()
 config.read(iniFile)
-debug=config['gpsio-host']['debug']
-chunk_size=int(config['gpsio-host']['chunk_size'])
+debug=config['gpsio-host'].get('debug',False)
+errlogdepth=int(config['gpsio-host'].get('errlogdepth','5'))
+chunk_size=int(config['gpsio-host'].get('chunk_size','100000'))
 gpsbabel_exe=config['gpsio-host']['gpsbabel_exe']
 
-def log(message):
-    if debug:
-        logfile.write(message+'\n')
+###################
+### logging setup
+###################
 
-# write debug files, if any, to cross-platform user's home directory
-debug_path=os.path.expanduser("~")
+logfile=os.path.join(os.path.expanduser('~'),'gpsio_host-log.txt')
+level=logging.INFO
 if debug:
-    logfile=open(os.path.join(debug_path,"gpsio-host_log.txt"),"w")
-    logfile.write("GPSIO Host invoked at "+time.strftime("%a %d %b %Y %H:%M:%S")+"\n")
-    logfile.write("Python="+sys.version+"\n")
-    logfile.write("host version="+str(version)+"\n")
-    logfile.write(".ini file="+iniFile+"\n")
-    logfile.write("GPSBabel executable="+gpsbabel_exe+"\n")
-    logfile.write("data transfer chunk size="+str(chunk_size)+"\n")
-    logfile.write("platform="+sys.platform+"\n")
-    logfile.write("arguments:"+str(sys.argv)+"\n")
+    level=logging.DEBUG
+
+logging.basicConfig(
+        filename=logfile,
+        filemode='w',
+        format='%(levelname)s : %(message)s',
+        level=level)
+
+# add a custom handler that doesn't print anything, but instead copies the file
+#  to a backup if level is ERROR or CRITICAL.  It's important to make sure this
+#  happens >after< the first default handler that actually does the printing.
+# Only keep [logdepth] error log files (default 5).
+errlog=False
+class CustomHandler(logging.StreamHandler):
+    def emit(self,record):
+        if record.levelname in ['ERROR','CRITICAL']:
+            global errlog
+            # if this is the first error/critical record for this session,
+            #  rotate the error log files in preparation for copying of the current log
+            if not errlog:                    
+                for n in range(errlogdepth-1,0,-1):
+                    src=logfile+'.err.'+str(n)
+                    dst=logfile+'.err.'+str(n+1)
+                    if os.path.isfile(src):
+                        os.replace(src,dst)
+                src=logfile+'.err'
+                dst=logfile+'.err.1'
+                if os.path.isfile(src):
+                    os.replace(src,dst)
+                errlog=True
+            # if this session has had any error/critical records, copy to error log file
+            #  (regardless of the current record's level)
+            if errlog:
+                shutil.copyfile(logfile,logfile+'.err')
+
+logging.root.addHandler(CustomHandler())
+
+# log uncaught exceptions - https://stackoverflow.com/a/16993115/3577105
+# don't try to print from inside this function, since stdout is in binary mode
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logging.critical('Uncaught exception', exc_info=(exc_type, exc_value, exc_traceback))
+sys.excepthook = handle_exception
+
+###################
+### end logging setup
+###################
+
+logging.info("GPSIO Host invoked at "+time.strftime("%a %d %b %Y %H:%M:%S"))
+logging.info("Python="+sys.version)
+logging.info("host version="+str(version))
+logging.info(".ini file="+iniFile)
+logging.info("GPSBabel executable="+gpsbabel_exe)
+logging.info("data transfer chunk size="+str(chunk_size))
+logging.info("platform="+sys.platform)
+logging.info("arguments:"+str(sys.argv))
 
 win32=sys.platform=='win32'
 darwin=sys.platform=='darwin'
 linux=sys.platform=='linux'
 
 if not os.path.isfile(gpsbabel_exe):
-    if debug:
-        logfile.write("ERROR: specified gpsbabel_exe "+gpsbabel_exe+" is not a file.  Exiting.\n")
+    logging.critical("specified gpsbabel_exe "+gpsbabel_exe+" is not a file.  Exiting.")
     sys.exit()
 
 # reopen stdout and stdin in bytes mode for all platforms
@@ -83,11 +132,14 @@ try:
     # w+b causes errors on mac; wb works as excpected on windows and mac
     sys.stdout=os.fdopen(sys.stdout.fileno(),'wb')
 except Exception as e:
-    logfile.write('stdout reopen error:'+str(e)+'\n')
+    logging.error('stdout reopen error:'+str(e))
 try:
-    sys.stdin=os.fdopen(sys.stdin.fileno(),'rb',0)
+    # stdin thru pyinstaller on mac appears to truncate at 65kb;
+    #  avoid this by using standard buffering rather than unbuffered,
+    #  i.e. just don't specify a third argument to fdopen
+    sys.stdin=os.fdopen(sys.stdin.fileno(),'rb')
 except Exception as e:
-    logfile.write('stdin reopen error:'+str(e)+'\n')
+    logging.error('stdin reopen error:'+str(e))
 
 # Also, on Windows, the default I/O mode is O_TEXT. Set this to O_BINARY
 # to avoid unwanted modifications of the input/output streams.
@@ -98,8 +150,10 @@ if win32:
         msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
         msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     except Exception as e:
-        sys.exit("ABORT: "+str(e)+"\nMaybe this script is being run from the command line with no arguments?  If so, this abort is expected.  Use it from the web browser extension.")
+        logging.critical("ABORT: "+str(e)+"\nMaybe this script is being run from the command line with no arguments?  If so, this abort is expected.  Use it from the web browser extension.")
+        sys.exit(-1)
 
+logging.info('TEST')
 
 # Helper function that sends a message to the webapp.
 def send_message(message):
@@ -108,10 +162,9 @@ def send_message(message):
     msglen=len(message)
     chunk_array=[message[i:i+chunk_size] for i in range(0,msglen,chunk_size)]
 
-    if debug:
-        logfile.write("msglen="+type(msglen).__name__+":"+str(msglen)+"\n")
-        logfile.write("message="+type(message).__name__+":"+str(message)+"\n")
-        logfile.write("chunk_array length: "+str(len(chunk_array))+"\n")
+    logging.debug("msglen="+type(msglen).__name__+":"+str(msglen))
+    logging.debug("message="+type(message).__name__+":"+str(message))
+    logging.debug("chunk_array length: "+str(len(chunk_array)))
 
     # send each chunk as a separate message; each is UTF-8 encoded JSON,
     #  prepended by 32-bit length of encoded message, per Chrome spec
@@ -119,20 +172,18 @@ def send_message(message):
         json_chunk=json.dumps(chunk)
         json_chunklen=len(json_chunk)
         json_chunklen_bytes=struct.pack('@I',json_chunklen)
-        if debug:
-            logfile.write("CHUNK:"+chunk+"\n")
-            logfile.write(" JSON:"+json_chunk+"\n")
+        logging.debug("CHUNK:"+chunk)
+        logging.debug(" JSON:"+json_chunk)
         z=sys.stdout.write(json_chunklen_bytes)
         try: # flush is not strictly necessary but will fail if the pipe was broken for any reason
             sys.stdout.flush()
         except Exception as e:
-            log('ERR:'+str(e))
+            logging.error('ERR:'+str(e))
         z=sys.stdout.write(json_chunk.encode('latin-1'))
         try: # flush is not strictly necessary but will fail if the pipe was broken for any reason
             sys.stdout.flush()
         except Exception as e:
-            log('ERR:'+str(e))
-
+            logging.error('ERR:'+str(e))
 
 def Main():
     # process the 32-bit message length to determine how many bytes to read
@@ -141,16 +192,14 @@ def Main():
     try:
         request_length = struct.unpack('i', request_length_bytes)[0]
     except Exception as e:
-        logfile.write("Error during initial read from stdin: "+str(e))
+        logging.error("Error during initial read from stdin: "+str(e))
 
-    if debug:
-        logfile.write("request_length="+type(request_length).__name__+":"+str(request_length)+"\n")
+    logging.debug("request_length="+type(request_length).__name__+":"+str(request_length))
 
     # read the request of specified length: UTF-8 encoded JSON, per Chrome specs
     request = sys.stdin.read(request_length).decode('utf-8')
 
-    if debug:
-        logfile.write("request="+type(request).__name__+":"+str(request)+"\n")
+    logging.debug("request="+type(request).__name__+":"+str(request))
 
 
     # validate and parse the request
@@ -223,12 +272,10 @@ def Main():
             # 2c. if still no connection, return with an error
             drive=scan_for_gmsm()
             if drive:
-                if debug:
-                    logfile.write("GMSM drive found at "+drive+"; calling transfer_gmsm\n")
+                logging.info("GMSM drive found at "+drive+"; calling transfer_gmsm")
                 transfer_gmsm(cmd,data,drive,options)
             else:
-                if debug:
-                    logfile.write("No GMSM drive was found; calling transfer_gbsbabel\n")
+                logging.info("No GMSM drive was found; calling transfer_gbsbabel")
                 transfer_gpsbabel(cmd,data,"garmin")
         else:
             send_message({'cmd': cmd, 'status': 'error', 'message': 'Currently, \'garmin\' is the only supported target'})
@@ -237,9 +284,8 @@ def Main():
         send_message({'cmd': cmd, 'status': 'error', 'message': 'must specify \'target\' in the JSON request'})
         sys.exit()
 
-    if debug:
-        logfile.write("rq.cmd:"+cmd+"\n")
-        logfile.write("rq.target:"+target+"\n")
+    logging.debug("rq.cmd:"+cmd)
+    logging.debug("rq.target:"+target)
 
 # ensure_xmlns: if needed, add namespace definitions like 'xmlns:gpxtrkx...'
 # mmap is nice because it modifies the file in place rather than
@@ -247,7 +293,7 @@ def Main():
 #  (mmap.resize doesn't exist on mac) and gpsio better already have
 #  permission to write files, so, do it using 'standard' python read and write
 def ensure_xmlns(filename,name,text):
-    logfile.write("Checking "+filename+" for 'xmlns:"+name+"' ... ")
+    logging.debug("Checking "+filename+" for 'xmlns:"+name+"' ... ")
     found=False
     with open(filename,mode='r+',encoding='utf-8') as f:
         for line in f:
@@ -255,9 +301,9 @@ def ensure_xmlns(filename,name,text):
                 found=True
                 break
     if found:
-        logfile.write('found.\n')
+        logging.debug('  found.')
     else:
-        logfile.write('not found.  Adding...\n')
+        logging.debug('  not found.  Adding...')
     
     if not found:
         tmpname=filename+'.tmp'
@@ -295,15 +341,19 @@ def scan_for_gmsm():
     if win32:
         drives=["A:\\","B:\\","C:\\","D:\\","E:\\","F:\\","G:\\","H:\\","I:\\","J:\\","K:\\","L:\\","M:\\","N:\\"]
         for drive in drives:
-            if os.path.exists(os.path.join(drive, GDXML_FILENAME)):
+            fn=os.path.join(drive, GDXML_FILENAME)
+            logging.info('Checking for "'+fn+'"...')
+            if os.path.exists(fn):
+                logging.info('  found!')
                 return drive
         return False
     elif darwin:
         vols = os.listdir('/Volumes')
         for vol in vols:
-            if debug:
-                logfile.write('Checking for '+os.path.join('/Volumes', vol, GDXML_FILENAME) + "\n")
-            if os.path.exists(os.path.join('/Volumes', vol, GDXML_FILENAME)):
+            fn=os.path.join('/Volumes', vol, GDXML_FILENAME)
+            logging.info('Checking for "'+fn+'"...')
+            if os.path.exists(fn):
+                logging.info('  found!')
                 return os.path.join('/Volumes', vol)
     else:
         return False
@@ -350,8 +400,7 @@ def transfer_gmsm(cmd,data,drive,options):
         #   unplug and delete all of the items that were exported from caltopo; then
         #    re-plug: that Imported_ file no longer exists.
 
-    if debug:
-        logfile.write("inside transfer_gmsm\n")
+    logging.debug("inside transfer_gmsm")
 
     if cmd=="import":
 
@@ -359,17 +408,16 @@ def transfer_gmsm(cmd,data,drive,options):
         # start with a list of all .gpx files recursively under Garmin/GPX
         gpx_files=[]
         gpxdir=os.path.join(drive,'Garmin','GPX')
-        if debug:
-            logfile.write("Checking recursively for .gpx files, starting at "+gpxdir+"\n")
+        logging.debug("Checking recursively for .gpx files, starting at "+gpxdir)
         try:
             for root, dirs, files in os.walk(gpxdir):
                 for file in files:
                     if file.upper().endswith(".GPX") and not(file.startswith(".")):
                         fullpath=os.path.join(root,file)
                         gpx_files.append(fullpath)
-                        log('Found GPX file: '+fullpath)
+                        logging.debug('Found GPX file: '+fullpath)
         except Exception as e:
-            log("Exception during GPX search: "+str(e))
+            logging.error("Exception during GPX search: "+str(e))
             send_message({'cmd': cmd, 'status': 'error', 'message': 'Host encountered an error during search for GPX files.' })
             sys.exit()
 
@@ -378,8 +426,7 @@ def transfer_gmsm(cmd,data,drive,options):
         totalFileCount=len(gpx_files)
         
         if totalFileCount == 0:
-            if debug:
-                logfile.write("No GPX files were found on the device.\n")
+            logging.info("No GPX files were found on the device.")
             send_message({'cmd': cmd, 'status': 'error', 'message': 'No GPX files were found on the device.' })
             sys.exit()
 
@@ -399,20 +446,17 @@ def transfer_gmsm(cmd,data,drive,options):
                 # then make sure 1<=m<=n
                 m=max(1,min(m,n))
                 
-                if debug:
-                    logfile.write("Selecting files "+str(m)+" thru "+str(n)+" from a reverse-chronological-order sorted list...\n")
+                logging.info("Selecting files "+str(m)+" thru "+str(n)+" from a reverse-chronological-order sorted list...")
                 gpx_files=gpx_files[m-1:n]
                 
             if options["method"]=="time" and "timeSel" in options:
                 currentTime=time.time()
-                if debug:
-                    logfile.write("Filtering out files older than "+options["timeSel"]+" hours...\n")
+                logging.info("Filtering out files older than "+options["timeSel"]+" hours...")
                 gpx_files=[f for f in gpx_files if (currentTime-os.path.getmtime(f))/3600<int(options["timeSel"])]    
 
         if "size" in options:                
             if options["size"]==True and "sizeSel" in options:
-                if debug:
-                    logfile.write("Filtering out files larger than "+options["sizeSel"]+"...\n")
+                logging.info("Filtering out files larger than "+options["sizeSel"]+"...")
                 # as long as sizeSel is in the format of <n>kb or <n>mb (case does not matter)
                 #  then the following line will filter correctly, i.e. '10kB' or '5MB'
                 gpx_files=[f for f in gpx_files if (os.path.getsize(f)<eval(options["sizeSel"].lower().replace("kb","*1024").replace("mb","*1048576")))]
@@ -424,29 +468,27 @@ def transfer_gmsm(cmd,data,drive,options):
         # list the filtered file set
         filteredFileCount=len(gpx_files)
         if filteredFileCount == 0:
-            if debug:
-                logfile.write("No recent files out of " + str(totalFileCount) + " total gpx files on the device:\n")
+            logging.info("No recent files out of " + str(totalFileCount) + " total gpx files on the device:")
             send_message({'cmd': cmd, 'status': 'error', 'message': 'No GPX files out of '+str(totalFileCount)+' met the filter settings.  Click the GPSIO Extension icon for details.' })
             sys.exit()
         if debug:
-            logfile.write("Sending "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total gpx files on the device:\n")
-            logfile.write(str(gpx_files)+"\n")
+            logging.info("Sending "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total gpx files on the device:")
+            logging.info(str(gpx_files))
         
         # 2. use gpsbabel to combine the files and send to the extension
         args=[gpsbabel_exe,"-w","-r","-t","-i","gpx"]
         for gpx_file in gpx_files:
             args.extend(("-f",gpx_file))
         args.extend(("-o","gpx","-F","-"))
-        if debug:
-            logfile.write("invoking: "+str(args)+"\n")
-            logfile.write("with data: "+str(data)+"\n")
+        logging.debug("invoking: "+str(args))
+        logging.debug("with data: "+str(data))
         p=subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, err = p.communicate(data)
         if err != None and len(err) > 2:
             send_message({'cmd': cmd, 'status': 'error', 'message': str(err.decode('latin-1')) })
         else:
-            if err!=b'' and debug:
-                logfile.write("err: "+str(err)+"\n")
+            if err!=b'':
+                logging.error("Error during call to GPSBabel: "+str(err))
             note="Showing data from "+str(filteredFileCount)+" out of "+str(totalFileCount)+" total GPX file(s).  Click the GPSIO Extension icon for details."
             send_message({'cmd': cmd, 'status': 'ok', 'note': note, 'message': str(output.decode('latin-1')) })
     elif cmd=="export":
@@ -455,8 +497,7 @@ def transfer_gmsm(cmd,data,drive,options):
             send_message({'cmd': cmd, 'status': 'error', 'message': 'GPS located at '+str(drive)+': but Garmin/GPX directory was not found'})
             sys.exit()
         gpx_fname=os.path.join(drive,'Garmin','GPX','gpsio'+time.strftime("%Y_%m_%d_%H%M%S")+'.gpx')
-        if debug:
-            logfile.write("gpx_fname="+str(gpx_fname)+'\n')
+        logging.debug("gpx_fname="+str(gpx_fname))
         gpx=open(gpx_fname,"w")
         gpx.write(data)
         gpx.close
@@ -472,22 +513,18 @@ def transfer_gpsbabel(cmd,data,target):
     elif(cmd=="export"):
         args=[gpsbabel_exe,"-w","-r","-t","-i","gpx","-f","-","-o",target,"-F","usb:"]
         data=data.encode('utf-8')
-        if debug:
-            logfile.write("rq.data length:"+str(len(data))+"\n")
-            logfile.write("rq.data:"+str(data)+"\n")
+        logging.debug("rq.data length:"+str(len(data)))
+        logging.debug("rq.data:"+str(data))
     else:
         send_message({'cmd': cmd, 'status': 'error', 'message': 'cmd must be \'import\' or \'export\''})
         sys.exit()
 
     # do the subprocess command and send any data
-    if debug:
-        logfile.write("invoking: "+str(args)+"\n")
+    logging.debug("invoking: "+str(args))
     p=subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if debug:
-        logfile.write("  subprocess object created... ")
+    logging.debug("  subprocess object created... ")
     output, err = p.communicate(data)
-    if debug:
-        logfile.write("  subprocess communcation complete.\n")
+    logging.debug("  subprocess communcation complete.")
 
     # if no usb device is found, err will be a multi-line string like this:
 
@@ -508,8 +545,7 @@ def transfer_gpsbabel(cmd,data,target):
 
     if err:
         err=str(err.decode('latin-1'))
-        if debug:
-            logfile.write("err: "+err)
+        logging.error("Error during GPSBabel: "+err)
         if "The system cannot find the path specified." in err or "The device is not ready." in err:
             send_message({'cmd': cmd, 'status':'error','message':'no GPS was found'})
         else:
@@ -519,9 +555,9 @@ def transfer_gpsbabel(cmd,data,target):
     if debug:
         response = {}
         response['output']=str(output.decode('latin-1'))
-        logfile.write("resonse: " + json.dumps(response))
-        logfile.write("output="+type(output).__name__+":"+str(output)+"\n")
-        logfile.write("Total xml response length: "+str(len(output))+" bytes\n")
+        logging.debug("resonse: " + json.dumps(response))
+        logging.debug("output="+type(output).__name__+":"+str(output))
+        logging.debug("Total xml response length: "+str(len(output))+" bytes")
 
     if(cmd=="import"):
         send_message({'cmd': cmd, 'status': 'ok', 'message': str(output.decode('latin-1'))})

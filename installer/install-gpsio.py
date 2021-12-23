@@ -430,12 +430,17 @@ def stage_4():
                     os.makedirs(os.path.join(HOST_DIR,'bak'),exist_ok=True)
                     bakfile=os.path.join(HOST_DIR,'bak',f+'.'+datetime.now().strftime('%Y%m%d-%H%M'))
                     shutil.copyfile(os.path.join(HOST_DIR,f),bakfile)
-                    oschmod.set_mode(bakfile,'a+w')
+                    if win32:
+                        oschmod.set_mode(bakfile,'a+w')
+                    else:
+                        os.chmod(bakfile,0o666)
         shutil.copytree(os.path.join(INSTALL_TMP,'host'),HOST_DIR,dirs_exist_ok=True)
         # add edit permissions for all to gpsio-host.* in case the user needs to modify them
-        if win32:
-            for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
+        for f in glob.glob(HOST_DIR+'\\gpsio-host.*'):
+            if win32:
                 oschmod.set_mode(f,'a+w')
+            else:
+                os.chmod(f,0o666)
     else:
         log('4. Native Host : FAILED')
         ltxt+='\n\nNATIVE HOST INSTALLATION FAILED - the temporary installation directory, which should contain the necessary extracted files, does not exist.'
