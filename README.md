@@ -4,7 +4,7 @@
 
 GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages and GPS devices.
 
-While GPSIO is originally intended for use with CalTopo.com, SARTopo.com, and CalTopo Desktop (the locally hosted version of CalTopo and SARTopo), it could be applied to other web pages.
+While GPSIO is originally intended for use with [CalTopo.com](https://caltopo.com), [SARTopo.com](https://sartopo.com), and CalTopo Desktop (the locally hosted version of CalTopo and SARTopo), it could be applied to other web pages.
 
 | Installer              | Download          |
 | :--------------------- | :---------------- |
