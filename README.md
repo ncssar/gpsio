@@ -63,7 +63,7 @@ The host uses Python 3.  A minimal installation of Python 3 is included in the W
 
 In Windows, the host is a batch file (gpsio-host.bat) that invokes a Python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the host directory above.
 
-The browser extensions need to know where the actual native host executable is located on your computer.  This mapping is done by the 'Native Messaging Host Manifest' files.  The GPSIO installer will create these files for you.  If you need to do create the manifests by hand, refer to the various browser development documents.  Please contact the developer if you need help setting this up.
+The browser extensions need to know where the actual native host executable is located on your computer.  This mapping is done by the 'Native Messaging Host Manifest' files.  The GPSIO installer will create these files for you.  If you need to do create the manifests by hand, refer to the various browser development documents.  Please [the developer](https://github.com/ncssar/gpsio#q-how-do-i-contact-the-developer) if you need help setting this up.
 
 
 ## Extensions - Installation Follow-up and Details
@@ -131,15 +131,15 @@ GPSIO is free software (GPL) and is hosted at https://github.com/ncssar/gpsio. C
 You tried to install GPSIO but it's not working... what now?  Troubleshooting GPSIO is tricky because it has multiple parts.  Here are some troubleshooting guidelines:
 1. Do you see the GPSIO extension icon (a very small globe with two red arrows) at the top right of your browser window, alongside any other extension icons?
     - YES: go to the next step
-    - NO: the browser extension hasn't been installed and/or enabled (and/or 'pinned' for Chrome); see the installation steps above.  If that doesn't solve it, contact the developer with these details.
+    - NO: the browser extension hasn't been installed and/or enabled (and/or 'pinned' for Chrome); see the installation steps above.  If that doesn't solve it, [contact the developer](https://github.com/ncssar/gpsio#q-how-do-i-contact-the-developer) with these details.
 2. Left-click the GPSIO extension icon.  A small popup box should appear near the extension icon.  Does it have a red line of text that says 'Cannot communicate with host', or, a green line of text that says 'Plugin working properly', or a blue line that says 'OK for now', with a selection of filter options?
     - RED: left-click 'check again' once or twice.  If the red line doesn't go away, go to the next step.
-    - GREEN: contact the developer with exact details of the error you're seeing.
+    - GREEN: [contact the developer](https://github.com/ncssar/gpsio#q-how-do-i-contact-the-developer) with exact details of the error you're seeing.
     - BLUE: follow the steps for GREEN; also, tell your local tech support that it's time to update the GPSIO host.
 3. Open a command terminal, go to the default gpsio installation directory (normally, C:\Program Files (x86)\GPSIO on Windows, or /Library/GPSIO on mac), and run gpsio-host.py using python.  It should appear to hang - just type a few letters and hit enter.  Any error messages in the first part of gpsio-host.py will show up here, but most of the code relies on being run through the browser so won't be tested by running it from the command line.
 4. If you see 'Reading data from GPS . . .' followed by a bold red line 'GPS Exception: Unexpected disconnect' when you try to import using GPSIO, check the GPSIO log file (normally gpsio-host_log.txt in your home directory).  This indicates that gpsio-host.py encountered an error, which will hopefully show up in the log file.
 
-Always feel free to contact the developer if you have any questions.
+Always feel free to [contact the developer](https://github.com/ncssar/gpsio#q-how-do-i-contact-the-developer) if you have any questions.
 
 ## F.A.Q
 
@@ -161,3 +161,6 @@ A: The unmodified prerequisites (GPSBabel installer, the Firefox extension archi
 
 ### Q: Why does the mac installer ask for permission to access files on removable drives?
 A: No idea.  Nothing in the installer requires access to removable drives.  [This question has been raised on Stackoverflow.](https://stackoverflow.com/questions/70173334)
+
+### Q: How do I contact the developer?
+A: [Open a new issue](https://github.com/ncssar/gpsio/issues/new) which will be seen by others viewing or working on this project, or send email to sartech456 at gmail dot com.
