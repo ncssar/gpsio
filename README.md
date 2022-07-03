@@ -63,7 +63,7 @@ The host uses Python 3.  A minimal installation of Python 3 is included in the W
 
 In Windows, the host is a batch file (gpsio-host.bat) that invokes a Python script (gpsio-host.py, formerly wrapper.py).  You can find those files in the host directory above.
 
-The browser extensions need to know where the actual native host executable is located on your computer.  This mapping is done by the 'Native Messaging Host Manifest' files.  The GPSIO installer will create these files for you.  If you need to do create the manifests by hand, refer to the various browser development documents.  Please [the developer](https://github.com/ncssar/gpsio#q-how-do-i-contact-the-developer) if you need help setting this up.
+The browser extensions need to know where the actual native host executable is located on your computer.  This mapping is done by the 'Native Messaging Host Manifest' files.  The GPSIO installer will create these files for you.  If you need to do create the manifests by hand, refer to the various browser development documents.  Please [contact the developer](https://github.com/ncssar/gpsio#q-how-do-i-contact-the-developer) if you need help setting this up.
 
 
 ## Extensions - Installation Follow-up and Details
