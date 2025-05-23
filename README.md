@@ -4,7 +4,7 @@
 
 GPSIO is a web browser extension (and supporting 'native host') that aids the transfer of GPS data between web pages and many Garmin GPS devices.
 
-Suppored Garmin devices generally include GPSMap 60, 62, 64, and 65 series, and other named models of the similar generation.  GPSMap 66 and newer require MTP (Media Transfer Protocol) which is currently not supported in GPSIO.  See MTP notes farther down in this document.
+Supported Garmin devices generally include GPSMap 60, 62, 64, and 65 series, and other named models of the similar generation.  GPSMap 66 and newer require MTP (Media Transfer Protocol) which is currently not supported in GPSIO.  See MTP notes farther down in this document.
 
 While GPSIO is originally intended for use with [CalTopo.com](https://caltopo.com), [SARTopo.com](https://sartopo.com), and CalTopo Desktop (the locally hosted version of CalTopo and SARTopo), it could be applied to other web pages.
 
