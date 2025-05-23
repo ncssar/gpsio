@@ -32,6 +32,10 @@ The only part of GPSIO that the user normally sees is the transfer method select
 # Installing GPSIO
 Installers for Windows and MacOS are available above.  These installers are meant to encompass all of the manual installation steps listed below.  For linux, or if the installers don't work for whatever reason, you can follow this manual installation procedure.
 
+## Windows installation notes
+
+The installer is confirmed to work on Windows 11, but the Microsoft .NET portion may take quite a long time - up to 45 minutes, during which the Microsoft Downloading / Installing progress bar may appear to be hung or frozen.  If it doesn't install after an hour, please try again, and if the problem continues, please open an issue in this repository, or contact the developer directly.
+
 ## MacOS installation notes
 
 For MacOS, you may see this during installation if you have an external drive plugged in:
